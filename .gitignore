@@ -49,6 +49,9 @@ coverage.xml
 .env.*
 !.env.example
 
+# Private study notes (not committed)
+terminology-notes.md
+
 
 # OS
 .DS_Store
