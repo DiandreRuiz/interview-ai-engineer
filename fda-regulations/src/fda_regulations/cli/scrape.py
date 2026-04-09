@@ -7,19 +7,20 @@ import logging
 from pathlib import Path
 
 from fda_regulations.config import Settings
+from fda_regulations.ingest.corpus import write_corpus_jsonl
 from fda_regulations.ingest.scrape import extract_warning_letter_main_text, run_ingest
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(
-        description="Scrape FDA warning letters: paginated listing + per-letter HTML GETs.",
+        description="Scrape FDA warning letters: DataTables listing + per-letter HTML GETs.",
     )
     parser.add_argument(
         "--max-pages",
         type=int,
         default=None,
-        help="Override INGEST_MAX_LISTING_PAGES (max listing pages to scan).",
+        help="Override INGEST_MAX_LISTING_PAGES (cap DataTables AJAX batches after shell GET).",
     )
     parser.add_argument(
         "--max-letters",
@@ -33,6 +34,14 @@ def main() -> None:
         default=None,
         help="Write extracted main text per letter as <letter_id>.txt (article#main-content).",
     )
+    parser.add_argument(
+        "--write-corpus",
+        action="store_true",
+        help=(
+            "Write letters.jsonl and corpus_manifest.json under the corpus directory "
+            "(INGEST_CORPUS_DIR or ARTIFACT_ROOT/corpus)."
+        ),
+    )
     args = parser.parse_args()
     settings = Settings()
     overrides: dict[str, int] = {}
@@ -45,11 +54,19 @@ def main() -> None:
 
     result = run_ingest(settings)
     logging.info("Fetched %s letter document(s).", len(result.documents))
-    logging.info("Listing pages fetched: %s", result.listing_pages_fetched)
+    logging.info("Listing HTTP GETs (shell + DataTables): %s", result.listing_pages_fetched)
     logging.info("Listing rows iterated: %s", result.listing_rows_seen)
     if result.fetch_errors:
         first = result.fetch_errors[0]
         logging.warning("%s fetch error(s), e.g. %s", len(result.fetch_errors), first)
+
+    if args.write_corpus:
+        stats = write_corpus_jsonl(result.documents, settings.resolved_ingest_corpus_dir)
+        logging.info(
+            "Wrote corpus: %s (%s document(s))",
+            stats.letters_jsonl,
+            stats.documents_written,
+        )
 
     if args.preview_dir is not None:
         args.preview_dir.mkdir(parents=True, exist_ok=True)

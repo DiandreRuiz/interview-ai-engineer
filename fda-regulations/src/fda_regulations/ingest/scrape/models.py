@@ -34,7 +34,9 @@ class IngestResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     documents: tuple[RawLetterDocument, ...]
-    listing_pages_fetched: int
+    listing_pages_fetched: int = Field(
+        description="Count of listing-related HTTP GETs (hub shell + each DataTables AJAX batch).",
+    )
     listing_rows_seen: int
     fetch_errors: tuple[str, ...]
 
