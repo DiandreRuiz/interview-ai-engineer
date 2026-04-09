@@ -1,6 +1,7 @@
 """Placeholder retriever until BM25 + dense + RRF adapter loads real indexes."""
 
 from fda_regulations.search.protocol import RetrievalHit
+from fda_regulations.search.query import PreparedQuery
 
 
 class StubRetriever:
@@ -8,7 +9,7 @@ class StubRetriever:
 
     def search(
         self,
-        query: str,
+        query: PreparedQuery,
         *,
         top_k: int,
         label_filter: str | None = None,

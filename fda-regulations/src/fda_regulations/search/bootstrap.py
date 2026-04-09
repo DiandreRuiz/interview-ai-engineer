@@ -1,7 +1,5 @@
 """Construct a retriever from settings and on-disk artifact layout."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 
