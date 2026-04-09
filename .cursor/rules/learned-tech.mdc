@@ -1,0 +1,29 @@
+---
+description: Maintain gitignored terminology-notes.md with interview-ready definitions when new stack tech is introduced
+alwaysApply: true
+---
+
+# Learned tech — interview terminology file
+
+## File
+
+- **[`terminology-notes.md`](terminology-notes.md)** at the **repository root** (listed in **`.gitignore`** — local study notes, not committed).
+
+## When to update
+
+Whenever the change introduces or materially adopts a **technology, library, protocol, or architectural pattern** the candidate could be asked about in a **Modicus / takehome / RAG interview** (examples: new retrieval method, vector store, auth flow, observability tool, major framework).
+
+**Skip** routine dependency bumps, typo fixes, or internal refactors that do not change what tech is in play.
+
+## What to add
+
+1. Append a new **`## Term name`** section (or refresh an existing section if the stack choice changed).
+2. Use the **same structure and depth** as the current entries:
+   - **2–5 sentences** of clear, accurate definition (what it is, what problem it solves).
+   - A short **“In this project”** tie-in: how we use it in `fda-regulations`, hybrid RAG, ingest, Docker, CI, etc., with pointers to **`context/plans/implementation-plan.md`** or code paths when helpful.
+3. Prefer **plain language** over buzzwords; no need to duplicate the employer **`README.md`**.
+4. If the term is easily confused with another (e.g. RRF vs embeddings), add **one clarifying contrast** in the same section.
+
+## When to edit
+
+Do this **in the same change** as the substantive tech introduction, or **immediately after** in the same session—do not leave the terminology file stale relative to the implementation plan or obvious stack choices.
