@@ -25,6 +25,12 @@ Do **not** implement the full legacy plan (tiered entity linking, inspection sna
 - **Deliverables:** (1) ingest + brief report + inclusion/exclusion/reasoning; (2) novel processing — hybrid search + citations. Fork → branch → **PR to fork `main`** when submitting.
 - **Quality:** Concise documentation; **ruff** + **pyright** + **pytest** in CI; tests use **fixtures**, not live FDA calls in CI; secrets via **`.env.example`**.
 
+## Interview / code-review posture
+
+Optimize for **correctness** and for being able to **explain why** the code is shaped the way it is in a live review. Prefer straightforward, readable paths over clever or layered designs.
+
+Do **not** add speculative **future-proofing**, extra abstraction, plugin registries, or **micro-optimizations** that do not change PoC outcomes but *do* make the system harder to walk through out loud. If a choice is not easy to justify in a few sentences against the plan in **`context/plans/implementation-plan.md`**, lean toward the simpler option and record the trade-off there when it matters.
+
 ## When in doubt
 
 Document the decision and move on (`README.md`: *If anything is ambiguous, make a decision, document your reasoning, and move on.*).

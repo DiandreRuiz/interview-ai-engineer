@@ -52,6 +52,8 @@ coverage.xml
 # Private study notes (not committed)
 terminology-notes.md
 
+# Local scraped letter previews (fda-scrape --preview-dir)
+reports/ingest_preview/
 
 # OS
 .DS_Store
