@@ -13,8 +13,12 @@ dependencies = [
     "fastapi>=0.115.0",
     "httpx>=0.28.0",
     "lxml>=5.3.0",
+    "numpy>=2.4.4",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.6.0",
+    "rank-bm25>=0.2.2",
+    "sentence-transformers>=5.4.0",
+    "torch>=2.11.0",
     "uvicorn[standard]>=0.32.0",
 ]
 
@@ -28,6 +32,7 @@ dev = [
 
 [project.scripts]
 fda-scrape = "fda_regulations.cli.scrape:main"
+fda-build-index = "fda_regulations.cli.build_index:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
