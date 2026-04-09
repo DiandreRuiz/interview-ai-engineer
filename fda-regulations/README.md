@@ -39,3 +39,21 @@ From the repository root:
 uv --directory fda-regulations sync --group dev
 uv --directory fda-regulations run pytest
 ```
+
+## Scrape warning letters (batch CLI)
+
+Fetches the FDA **listing** table (`?page=0`, `?page=1`, …) and **one GET per letter** for HTML. Use caps while developing; omit caps for a **full-catalog** run (slow, be polite with `INGEST_REQUEST_DELAY_SECONDS`).
+
+```bash
+uv run fda-scrape --max-pages 2 --max-letters 5
+```
+
+Write **plain-text previews** (body extracted from `article#main-content`) for each letter:
+
+```bash
+uv run fda-scrape --max-pages 2 --max-letters 5 --preview-dir ../reports/ingest_preview
+```
+
+If `uv run fda-scrape` fails to import the package, use `PYTHONPATH=src uv run python -m fda_regulations.cli.scrape …` or run `uv pip install -e .` once from `fda-regulations/`.
+
+See **`context/plans/implementation-plan.md`** (Warning letter ingestion), **`src/fda_regulations/ingest/README.md`** (scrape layout), and **`.env.example`** for env vars. Import the batch scraper from **`fda_regulations.ingest.scrape`**. Default **CI tests do not call FDA** (fixtures + RESPX).
