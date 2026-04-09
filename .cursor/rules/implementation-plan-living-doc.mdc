@@ -7,10 +7,10 @@ alwaysApply: true
 
 **`context/plans/implementation-plan.md`** is the **only** planning document for this repo (besides the assignment `README.md`).
 
-When you **implement** something substantive or **change approach** (architecture, pipeline steps, stack, dependencies, package layout, taxonomy/retrieval behavior, Docker/CI, or what is in/out of scope):
+When you **implement** something substantive or **change approach** (architecture, pipeline steps, stack, dependencies, package layout, retrieval behavior, Docker/CI, or what is in/out of scope):
 
 1. **Update [`context/plans/implementation-plan.md`](context/plans/implementation-plan.md)** in the same change (or right after in the same session).
-2. Touch only the sections that are no longer accurate—e.g. elevator pitch, core table, pipeline, taxonomy rules, package layout, deferred items, interview checklist.
+2. Touch only the sections that are no longer accurate—e.g. elevator pitch, core table, pipeline, labeling/deferred items, package layout, interview checklist.
 3. **Do not** rewrite the assignment **[`README.md`](README.md)** to match our plan; that file stays the employer’s spec. Our decisions belong in **`context/plans/implementation-plan.md`**.
 
 **Skip** plan updates for edits that do not change behavior or agreed scope (typos, formatting, comments only).

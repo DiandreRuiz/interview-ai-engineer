@@ -28,11 +28,11 @@ description: Applies maintainable Python patterns for typed application code, pa
 ## Data and configuration
 
 - **Secrets:** environment variables + `.env.example`; never commit keys.
-- **Configurable thresholds** (e.g. taxonomy score): named constants or settings object, documented in `context/plans/implementation-plan.md` when they affect behavior.
+- **Configurable thresholds** (e.g. RRF `k`, similarity cutoffs): named constants or settings object, documented in `context/plans/implementation-plan.md` when they affect behavior.
 
 ## Tests
 
-- **Arrange–act–assert**; one logical behavior per test; descriptive names (`test_classify_returns_unclassified_when_below_threshold`).
+- **Arrange–act–assert**; one logical behavior per test; descriptive names (e.g. `test_parse_listing_skips_duplicate_slugs`).
 - **Parametrize** similar cases instead of copy-paste.
 - **Deterministic** time and randomness (freeze or inject clocks / seeds) when assertions depend on them.
 

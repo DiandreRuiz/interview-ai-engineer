@@ -34,7 +34,7 @@ The employer [README.md](../../../README.md) allows **either** the structured Da
 ## Implementation-plan alignment
 
 - **Chunk identity:** stable `chunk_id` tied to letter + paragraph (or logical block) for hybrid retrieval and citations.
-- **CFR mentions:** extract per chunk with regex for metadata and taxonomy rules ([weak-supervision-taxonomy](../weak-supervision-taxonomy/SKILL.md)).
+- **CFR mentions:** extract per chunk with regex for **citation metadata** on `ChunkRecord`; optional taxonomy/labels are deferred in the current plan ([weak-supervision-taxonomy](../weak-supervision-taxonomy/SKILL.md) if you add that layer).
 
 ## Cross-references
 

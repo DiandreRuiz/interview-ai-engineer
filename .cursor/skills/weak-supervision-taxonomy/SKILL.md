@@ -1,13 +1,15 @@
 ---
 name: weak-supervision-taxonomy
-description: Implements bounded weak supervision for chunk taxonomy—CFR prefix rules, keyword or synonym overlap with optional TF-IDF, thresholds, unclassified fallback, and versioned label vocab in TOML or YAML. Use when classifying FDA warning letter chunks without training a new ML model in fda-regulations.
+description: Bounded weak supervision for chunk taxonomy (CFR rules + keyword overlap + small vocab)—use when extending fda-regulations or discussing interview follow-ons; the slim PoC defers this layer.
 ---
 
 # Weak supervision taxonomy (bounded)
 
+> **Current repo:** The shipped PoC **does not** include a `taxonomy/` package. Chunks carry **CFR regex strings** for citations only. See **Taxonomy — deferred** in [implementation-plan.md](../../../context/plans/implementation-plan.md). This skill is for **extensions** or interview design.
+
 **References**
 
-- Project rules: [implementation-plan.md](../../../context/plans/implementation-plan.md) (taxonomy section)
+- Project rules: [implementation-plan.md](../../../context/plans/implementation-plan.md) (deferred taxonomy / interview story)
 - **TOML (read-only):** [tomllib](https://docs.python.org/3/library/tomllib.html) (Python 3.13 stdlib)
 - **YAML (optional):** [PyYAML](https://pyyaml.org/wiki/PyYAMLDocumentation)
 - **TF-IDF (optional path):** [sklearn.feature_extraction.text.TfidfVectorizer](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)

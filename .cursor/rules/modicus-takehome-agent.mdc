@@ -14,7 +14,7 @@ alwaysApply: true
 
 ## Solution direction (active plan)
 
-Implement the **simplified hybrid RAG** pipeline in **`context/plans/implementation-plan.md`**: warning-letter–centric ingest, **paragraph-level (contextual) chunking**, **bounded taxonomy weak supervision** (CFR rules + keyword overlap; small label vocab; typed `taxonomy/` modules—no bespoke ML stack), **BM25 + local embeddings + RRF**, search API with **letter/paragraph citations** and optional label filter/boost, phase-1 **report** with inclusion/exclusion, stats, and **label coverage**. Optional: small FDA Dashboard slice to seed/freeze labels; optional Langfuse or plain structured logging. **No pay-per-token APIs**; bounded PoC on M3-class hardware.
+Implement the **simplified hybrid RAG** pipeline in **`context/plans/implementation-plan.md`**: warning-letter–centric ingest, **paragraph-level (contextual) chunking** with **CFR regex metadata** on chunks (for citations, not taxonomy labels), **BM25 + local embeddings + RRF**, search API with **letter/paragraph citations** (`POST /search`: `query`, `top_k` only). Phase-1 **report**: counts + CFR coverage on chunks; **taxonomy / weak supervision** is **deferred**—describe in interviews as a future layer. Optional: small FDA Dashboard slice; optional Langfuse or plain structured logging. **No pay-per-token APIs**; bounded PoC on M3-class hardware.
 
 Do **not** implement the full legacy plan (tiered entity linking, inspection snapshots on every letter, large taxonomy, or Langfuse as a hard dependency) unless the user explicitly asks to expand scope.
 

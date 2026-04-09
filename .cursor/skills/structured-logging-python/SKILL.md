@@ -21,7 +21,7 @@ At **INFO**, log one line (or JSON object) per query with fields such as:
 - **`latency_ms`**
 - **`top_chunk_ids`** (ordered, capped length)
 - **`result_count`**
-- Optional **`taxonomy_filter`**
+- Optional **filter context** if the API gains metadata filters later
 
 Avoid logging **secrets** or full personal data from letters beyond what the report needs.
 

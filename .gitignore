@@ -55,6 +55,9 @@ terminology-notes.md
 # Local scraped letter previews (fda-scrape --preview-dir)
 reports/ingest_preview/
 
+# Batch pipeline outputs (corpus JSONL, BM25, embeddings)
+artifacts/
+
 # OS
 .DS_Store
 Thumbs.db

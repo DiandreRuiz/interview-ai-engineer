@@ -17,7 +17,7 @@ description: Tests fda-regulations with pytest using fixtures, RESPX or pytest-h
 
 - **No live FDA calls** in default CI runs; use **golden HTML/JSON fixtures** under `tests/fixtures/`.
 - **Arrange–act–assert**; one logical behavior per test ([python-best-practices](../python-best-practices/SKILL.md)).
-- Use **`@pytest.mark.parametrize`** for CFR/taxonomy edge cases instead of copy-paste.
+- Use **`@pytest.mark.parametrize`** for CFR / chunking / listing edge cases instead of copy-paste.
 
 ## HTTP mocking example (RESPX)
 

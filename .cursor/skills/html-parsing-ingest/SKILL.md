@@ -39,7 +39,7 @@ Government pages include navigation, headers, and footers. Strategy:
 
 - **Primary:** one chunk per **`<p>`** text after strip; assign **`paragraph_index`** in document order.
 - **Fallback:** if letters use **`<div>`** blocks without `<p>`, split on double newlines after normalizing whitespace.
-- Store **`letter_id`**, **`url`**, **`date`**, **`recipient`** (string) per letter metadata; attach **regex-extracted CFR strings** per chunk for taxonomy rules.
+- Store **`letter_id`**, **`url`**, **`date`**, **`recipient`** (string) per letter metadata; attach **regex-extracted CFR strings** per chunk as **citation metadata** (not used for automated labeling in the slim PoC).
 
 ## Defensive parsing
 
@@ -50,4 +50,4 @@ Government pages include navigation, headers, and footers. Strategy:
 ## Cross-references
 
 - Fetch HTML: [httpx-http-client](../httpx-http-client/SKILL.md).
-- CFR + labels: [weak-supervision-taxonomy](../weak-supervision-taxonomy/SKILL.md).
+- Optional label layer on top of CFR metadata: [weak-supervision-taxonomy](../weak-supervision-taxonomy/SKILL.md).

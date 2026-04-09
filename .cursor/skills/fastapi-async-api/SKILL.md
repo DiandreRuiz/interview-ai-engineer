@@ -11,7 +11,7 @@ description: Builds async FastAPI services with dependency injection, lifespan h
 - [FastAPI reference](https://fastapi.tiangolo.com/reference/)
 - [Lifespan events](https://fastapi.tiangolo.com/advanced/events/) (startup/shutdown)
 
-This project’s plan exposes a **`POST /search`** (or similar) endpoint returning ranked chunks with **citations** and optional **taxonomy** fields. Keep handlers **thin**: validate input, call pure retrieval functions, map to response models.
+This project’s **`POST /search`** returns ranked chunks with **citations** (`letter_url`, `chunk_id`, `paragraph_index`, `snippet`). Keep handlers **thin**: validate input, call the retriever (often via **`asyncio.to_thread`** for sync BM25/embeddings work), map to response models.
 
 ## App structure
 

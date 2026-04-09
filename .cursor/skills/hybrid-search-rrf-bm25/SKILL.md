@@ -60,7 +60,7 @@ def reciprocal_rank_fusion(
 
 1. Retrieve **top‑k_bm25** and **top‑k_dense** (separate `k` values allowed).
 2. Fuse with RRF to a merged ordering.
-3. Optionally **filter or boost** by taxonomy label (small constant boost is a light substitute for a cross-encoder reranker in the PoC).
+3. **Extensions (not in the slim PoC):** metadata **filter/boost** (e.g. by label) or a **cross-encoder rerank** on the top‑N fused list—see [weak-supervision-taxonomy](../weak-supervision-taxonomy/SKILL.md) if adding labels.
 
 ## Why RRF instead of score normalization
 
@@ -73,4 +73,4 @@ For larger corpora, consider **HNSW** or dedicated vector databases; the PoC oft
 ## Cross-references
 
 - Embeddings: [sentence-transformers-local](../sentence-transformers-local/SKILL.md).
-- Labels: [weak-supervision-taxonomy](../weak-supervision-taxonomy/SKILL.md).
+- Optional weak-supervision labels (extension / interview design): [weak-supervision-taxonomy](../weak-supervision-taxonomy/SKILL.md).
