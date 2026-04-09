@@ -14,7 +14,7 @@ From this directory:
 uv sync
 ```
 
-This installs runtime dependencies and **test/lint tooling** (pytest, ruff, pyright, respx) declared in `pyproject.toml` so reviewers can run quality checks with a single command.
+The project uses **setuptools** with **PEP 660 strict** editable installs (`[tool.uv] config-settings` in `pyproject.toml`), so the default **`uv sync`** path keeps live edits under `src/` while **`uv run …`** console scripts import reliably on **macOS + Python 3.13** (a plain Hatchling editable was hitting skipped **`.pth`** behavior there).
 
 Copy `.env.example` to `.env` if you want non-default settings. For local development **without** a built index, set `REQUIRE_ARTIFACTS=false` in `.env`.
 
@@ -95,7 +95,7 @@ uv run fda-scrape --max-pages 2 --max-letters 5 --preview-dir reports/ingest_pre
 
 **Full-catalog behavior:** leave `INGEST_MAX_LISTING_PAGES` and `INGEST_MAX_LETTERS` **unset** in `.env` and omit `--max-pages` / `--max-letters`. Expect a long, polite run.
 
-If `uv run fda-scrape` fails to import the package, use `PYTHONPATH=src uv run python -m fda_regulations.cli.scrape …` or run `uv pip install -e .` once from `fda-regulations/`.
+If `uv run` still cannot import the package, try `uv sync --reinstall-package fda-regulations` or `PYTHONPATH=src uv run python -m fda_regulations.cli.scrape …`.
 
 **CI:** tests do **not** call the live FDA network (fixtures + RESPX). See `src/fda_regulations/ingest/README.md` for scrape internals.
 

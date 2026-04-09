@@ -30,12 +30,12 @@ uv is Astral’s Python package and project manager (Rust); it replaces much of 
 **Best practices**
 
 - **Commit `uv.lock`** for applications and takehomes so installs are reproducible.
-- Document first-time setup as: `cd fda-regulations && uv sync` (or use `--directory`; see below).
+- For **fda-regulations**, document: `cd fda-regulations && uv sync` (see “This repo” below).
 - In **CI**, use `uv sync --frozen` (or current recommended frozen flag from docs) so lockfile mismatches fail fast.
 
 ## This repo: `fda-regulations/` as the uv project root
 
-The Modicus assignment uses the **`fda-regulations/`** folder as the `uv` project. **pytest, ruff, pyright, and respx** are listed in **`[project] dependencies`** (not a separate dev group), so **`uv sync`** installs everything needed to run tests and linters.
+The Modicus assignment uses the **`fda-regulations/`** folder as the `uv` project. **pytest, ruff, pyright, and respx** are listed in **`[project] dependencies`** (not a separate dev group). Use plain **`uv sync`**: **setuptools** with **`[tool.uv] config-settings = { editable_mode = "strict" }`** keeps default editable installs working with **`uv run`** on **macOS + Python 3.13**.
 
 Either:
 

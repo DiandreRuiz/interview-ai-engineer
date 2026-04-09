@@ -30,6 +30,11 @@ dependencies = [
 fda-scrape = "fda_regulations.cli.scrape:main"
 fda-build-index = "fda_regulations.cli.build_index:main"
 
+# PEP 660 strict editable (setuptools): uv passes this to the build backend so `uv sync`
+# (default editable) still works with `uv run` on macOS + Python 3.13 (see README).
+[tool.uv]
+config-settings = { editable_mode = "strict" }
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -55,4 +60,3 @@ typeCheckingMode = "standard"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]

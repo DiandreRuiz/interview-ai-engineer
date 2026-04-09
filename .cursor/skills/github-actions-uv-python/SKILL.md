@@ -15,7 +15,7 @@ description: Configures GitHub Actions for Python projects using astral-sh setup
 
 1. **`actions/checkout`** (pin to a major version the repo trusts, e.g. `v4` or newer per org policy).
 2. **`astral-sh/setup-uv`** with a **pinned `uv` version** for reproducibility (`version: "…"` in `with:`).
-3. **`uv sync --locked`** from the **`fda-regulations/`** project root (per uv’s GitHub guide). This repo keeps pytest, ruff, pyright, and respx in **main** `dependencies`, so no extra sync flags are required for CI.
+3. **`uv sync --locked`** from the **`fda-regulations/`** project root (per uv’s GitHub guide). The project pins setuptools **strict** editable via **`pyproject.toml`** `[tool.uv]` so **`uv run`** matches local macOS; dev tools live in **main** `dependencies`.
 4. Run checks with **`uv run`**.
 
 Example skeleton (adjust paths and Python pin to match `pyproject.toml`):

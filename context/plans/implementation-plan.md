@@ -55,7 +55,7 @@ That is a **hybrid RAG** story: sparse + dense retrieval, one fusion step, groun
 
 ## CI (README quality bar)
 
-- **GitHub Actions** (or equivalent): checkout, **`astral-sh/setup-uv`**, **`uv sync --locked`** from **`fda-regulations/`** (pytest, ruff, pyright, and respx are main dependencies in **`pyproject.toml`** alongside the service stack).
+- **GitHub Actions** (or equivalent): checkout, **`astral-sh/setup-uv`**, **`uv sync --locked`** from **`fda-regulations/`** (pytest, ruff, pyright, and respx are main dependencies in **`pyproject.toml`**). Local **`uv sync`** uses setuptools **PEP 660 strict** editable (`[tool.uv] config-settings` in **`pyproject.toml`**) so **`uv run`** works on **macOS + Python 3.13** without **`--no-editable`**.
 - Run **`ruff check`**, **`ruff format --check`**, **`pyright`**, **`pytest`** via **`uv run`**.
 - Default tests: **no live FDA network**; use fixtures. Pin **uv** (and optionally Python) per workflow docs ([uv on GitHub Actions](https://docs.astral.sh/uv/guides/integration/github/)).
 
