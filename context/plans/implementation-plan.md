@@ -29,6 +29,7 @@ That is a **hybrid RAG** story: sparse + dense retrieval, one fusion step, groun
 - Define a **narrow protocol** (e.g. `Retriever` / `IndexBackend`) in code: the hybrid BM25 + dense + RRF implementation is **one adapter**; a **second adapter** can implement an alternate pipeline for comparison (same request/response models where possible).
 - **Artifact contract:** version the on-disk layout (e.g. `index_manifest.json` with schema version, model id, build timestamp). The API and tests depend on the **contract**, not on internal details of `rank-bm25` vs a future library.
 - **HTTP scaffold (implemented):** FastAPI app factory in `fda_regulations.app.main` (`uvicorn fda_regulations.app.main:app`). Routes: **`GET /health`** (`status`, `index_ready`), **`POST /search`** (Pydantic request/response; optional `label_filter` / `label_boost`). Configuration via **`pydantic-settings`** — see **`fda-regulations/.env.example`** (`ARTIFACT_ROOT`, `REQUIRE_ARTIFACTS`, `RRF_K`, sparse/dense top-k placeholders). **Strict startup** requires `ARTIFACT_ROOT/index_manifest.json` with **`"schema_version": 1`** (minimal check until the indexer writes a fuller manifest). Query handlers call the **`Retriever` protocol** via **`asyncio.to_thread`** so sync CPU-heavy retrievers do not block the event loop.
+- **Query ingestion (implemented):** `prepare_search_query` in `fda_regulations.search.query` — strip, **NFKC** Unicode normalization, collapse whitespace, **`str.casefold`**, then **word tokens** (`\w+`, Unicode-aware) for BM25 alignment. The **`Retriever.search`** contract takes a **`PreparedQuery`** (`text` for dense encoding, `tokens` for sparse). The batch indexer must reuse the same rules when tokenizing chunk text.
 
 **A/B and future work**
 
@@ -106,7 +107,7 @@ You can say in the interview: *weak supervision here means explicit rules and a 
 
 **Batch pipeline (ingest + index)** — implements stages 1–4; outputs **versioned artifacts** consumed by the API.
 
-1. **Ingest letters (bounded)** — fetch/parse; **inclusion/exclusion** in the report.
+1. **Ingest letters** — paginated listing + detail HTML fetch (optional caps for dev; unset caps → **full catalog**); **inclusion/exclusion** in the report.
 2. **Chunk** — paragraph-level; CFR regex per chunk.
 3. **Classify (weak supervision)** — CFR rules → else keyword overlap → `unclassified`.
 4. **Index** — same `chunk_id` for BM25 + embeddings; store label + method on the chunk record; **persist** sparse + dense structures (and chunk metadata) to the artifact directory.
@@ -115,6 +116,58 @@ You can say in the interview: *weak supervision here means explicit rules and a 
 
 5. **Retrieve** — BM25 top-k ∥ dense top-k → **RRF** → optional filter/boost by label.
 6. **Respond** — snippets + **citation** + optional **label + method** on each hit.
+
+---
+
+## Warning letter ingestion (HTML listing + detail fetch)
+
+**Goal:** Discover **all published warning letters** (or a bounded subset for dev), download each **detail page HTML**, and pass **raw HTML + stable ids + listing metadata** to downstream **chunking**—without coupling ingest to BM25 or the search API.
+
+### Discovery (listing)
+
+- **Canonical listing URL:** FDA **Warning Letters** table  
+  [https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/compliance-actions-and-activities/warning-letters](https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/compliance-actions-and-activities/warning-letters)
+- **Pagination:** Drupal-style query parameter **`page`** — **`page=0`** is the first page; increment until a page yields **no letter detail links** (end of catalog) or a configured **max pages** cap is hit. Ingest metrics track **listing HTTP GETs** (`listing_pages_fetched`) separately from **detail fetches**.
+- **Parsing:** **Beautiful Soup** + **`lxml`** over the HTML table: collect **absolute** detail URLs under **`…/warning-letters/<slug>`**, excluding index/about links. Prefer **row-level** metadata when present (**posted date**, **letter issue date**, **company name** from the Company column).
+- **Stable id:** Use the URL **slug** (path segment after **`/warning-letters/`**) as **`letter_id`** unless a future manifest defines otherwise; it is unique on the site and citation-friendly.
+
+### Detail fetch (letter body)
+
+- **One GET per letter** to the detail URL; store **full response HTML** (UTF-8) for the **chunking** stage to extract main content and **`<p>`** blocks. Do not strip HTML in ingest; normalization belongs in **chunking** (see **html-parsing-ingest** skill under `.cursor/skills/`).
+- **Preview / plain text:** `fda_regulations.ingest.scrape.extract_warning_letter_main_text` targets **`article#main-content`** (FDA Drupal), drops `script`/`style`/`noscript`, and returns newline-separated text. **`fda-scrape --preview-dir …`** writes one **`.txt` per `letter_id`** for manual QA; paragraph chunking can trim in-article nav chrome later. **Public scrape API:** `fda_regulations.ingest.scrape`; implementation modules live under **`ingest/scrape/`** (see **`fda-regulations/src/fda_regulations/ingest/README.md`**).
+- **Politeness:** configurable **delay between requests**, **timeouts**, identifiable **`User-Agent`**, and optional caps (**`max_listing_pages`**, **`max_letters`**) so dev/CI stays fast and production-like runs can still aim for **full catalog** when caps are unset.
+- **Bulk alternative (optional later):** [data.gov Warning Letters](https://catalog.data.gov/dataset/warning-letters) publishes **WarningLettersDataSet.xml** (weekly); can seed URLs or cross-check counts—not required for v1 ingest if HTML listing pagination is sufficient.
+
+### On-disk corpus (planned; not implemented yet)
+
+**Goal:** Persist scraped letters so chunking and indexing can **re-run without re-hitting FDA**, and so the **search artifact contract** (`index_manifest.json`, BM25, vectors) stays clearly **downstream** of raw HTML.
+
+**Recommended layout (single tree under `ARTIFACT_ROOT`):**
+
+- **`{ARTIFACT_ROOT}/corpus/`** — **raw scrape outputs** only (large, local, typically **gitignored**).
+  - **Option A — JSONL:** one line per letter: `letter_id`, `url`, listing metadata, `html` (or a path to HTML if you split bodies out).
+  - **Option B — files:** `{letter_id}.html` plus **`corpus_manifest.json`** (or small JSONL) with metadata + fetch timestamp + optional content hash for idempotency.
+
+**Why not only `reports/ingest_preview/`?** That directory is for **human QA** (plain text from `--preview-dir`); the canonical store should keep **full HTML** (and structured metadata) for the batch pipeline.
+
+**Why not mix into the index directory without a subfolder?** Avoid dumping thousands of `.html` files next to `index_manifest.json` and sparse/dense index blobs—keeps **“what the API loads”** vs **“what ingest produced”** obvious.
+
+**Configuration:** Add something like **`INGEST_CORPUS_DIR`** (default **`{ARTIFACT_ROOT}/corpus`** resolved at runtime, or a path relative to the process cwd when **`fda-scrape`** runs from **`fda-regulations/`**) when persistence is implemented; document in **`.env.example`**.
+
+### Inclusion / exclusion (report + code)
+
+- **Include:** Letter **detail pages** under **`fda.gov`** with **HTTP 200** and expected **warning letter** path pattern.
+- **Exclude (count in report):** non-200, redirects to non-letter pages, **empty listing rows**, **parse failures**, non-English or unexpected templates (document if encountered). **Tests must not** depend on live FDA responses (fixtures + **RESPX**; see **pytest-http-fixtures** skill under `.cursor/skills/`).
+
+### Code layout (implemented / evolving)
+
+- **`fda_regulations/ingest/scrape/`** — listing parser, HTTP client, **`main.py`** (`run_ingest`, `iter_letter_list_entries`), Pydantic models for **list rows** and **raw letter documents**; **`fda_regulations.ingest.scrape`** is the public import surface.
+- **`fda_regulations/ingest/`** (package root) — reserved for future ingest stages (e.g. chunking orchestration) alongside **`scrape/`**.
+- **`fda_regulations/cli/`** — **`fda-scrape`** entrypoint (`uv run fda-scrape`) for batch **listing + letter HTML** runs; a future **ingest/index** CLI can orchestrate scrape + chunk + index and may call the same `ingest.scrape` APIs; corpus **JSONL** (or raw files) in a follow-on step when persistence is implemented.
+
+### Configuration (env)
+
+See **`fda-regulations/.env.example`**: listing base URL, **`FDA_USER_AGENT`**, **`INGEST_MAX_LISTING_PAGES`**, **`INGEST_MAX_LETTERS`**, **`INGEST_REQUEST_DELAY_SECONDS`**.
 
 ---
 
@@ -132,13 +185,14 @@ Keep code inside **`fda-regulations/`** as the `uv` project; repo root for Docke
 ```text
 fda-regulations/
   src/fda_regulations/
-    app/                   # FastAPI: lifespan, GET /health, POST /search, Pydantic schemas
+    types.py               # shared literals (e.g. ``ClassificationMethod``) — no app/search coupling
+    app/                   # FastAPI: lifespan, GET /health, POST /search, Pydantic models
     search/                # Retriever protocol, stub retriever, bootstrap from artifact_root
-    ingest/                # (planned) bounded letter fetch/parse
+    ingest/                # ingest package root; scrape/ = listing + detail HTML fetch (chunking consumes HTML)
     chunking/
     taxonomy/              # labels load + classify_chunk (CFR + keyword)
     index/                 # build + load index artifacts; pluggable backends for A/B
-    cli/                   # optional: typer/argparse entrypoints for “build index”, “ingest”
+    cli/                   # ``fda-scrape`` (argparse); extend for full ingest/index pipeline later
   tests/
 reports/
 ```
