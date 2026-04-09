@@ -86,6 +86,11 @@ def main() -> None:
         default=None,
         help="Optional path for phase-1 markdown report (same format as fda-build-index).",
     )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable Rich scrape progress on stderr during listing + new-letter fetches.",
+    )
     args = parser.parse_args()
 
     fda_root = _fda_project_root()
@@ -127,7 +132,11 @@ def main() -> None:
         len(existing_docs),
     )
 
-    result = run_ingest_new_letters(ingest_settings, existing_ids)
+    result = run_ingest_new_letters(
+        ingest_settings,
+        existing_ids,
+        show_progress=False if args.no_progress else None,
+    )
     logging.info(
         "Listing GETs (shell + DataTables): %s; rows seen: %s; new documents: %s",
         result.listing_pages_fetched,
@@ -135,7 +144,9 @@ def main() -> None:
         len(result.documents),
     )
     if result.fetch_errors:
-        logging.warning("%s letter fetch error(s), e.g. %s", len(result.fetch_errors), result.fetch_errors[0])
+        logging.warning(
+            "%s letter fetch error(s), e.g. %s", len(result.fetch_errors), result.fetch_errors[0]
+        )
 
     if not result.documents:
         logging.info("No new letters; leaving corpus and index unchanged.")

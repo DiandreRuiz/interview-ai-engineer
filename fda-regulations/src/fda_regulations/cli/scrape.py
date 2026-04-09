@@ -42,6 +42,11 @@ def main() -> None:
             "(INGEST_CORPUS_DIR or ARTIFACT_ROOT/corpus)."
         ),
     )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable Rich scrape progress on stderr (e.g. when capturing full logs).",
+    )
     args = parser.parse_args()
     settings = Settings()
     overrides: dict[str, int] = {}
@@ -52,7 +57,7 @@ def main() -> None:
     if overrides:
         settings = settings.model_copy(update=overrides)
 
-    result = run_ingest(settings)
+    result = run_ingest(settings, show_progress=False if args.no_progress else None)
     logging.info("Fetched %s letter document(s).", len(result.documents))
     logging.info("Listing HTTP GETs (shell + DataTables): %s", result.listing_pages_fetched)
     logging.info("Listing rows iterated: %s", result.listing_rows_seen)

@@ -12,12 +12,13 @@ from fda_regulations.site_urls import FDA_WARNING_LETTERS_LISTING_URL
 from .client import build_ingest_client
 from .letter_text import extract_warning_letter_main_text
 from .listing import parse_listing_page
-from .main import iter_letter_list_entries, run_ingest, run_ingest_new_letters
+from .main import ListingBatchProgress, iter_letter_list_entries, run_ingest, run_ingest_new_letters
 from .models import IngestResult, LetterListEntry, RawLetterDocument, utc_now
 
 __all__ = [
     "FDA_WARNING_LETTERS_LISTING_URL",
     "IngestResult",
+    "ListingBatchProgress",
     "LetterListEntry",
     "RawLetterDocument",
     "build_ingest_client",

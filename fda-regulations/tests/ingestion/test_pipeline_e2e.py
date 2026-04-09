@@ -116,7 +116,7 @@ def test_scrape_write_corpus_iter_chunk(tmp_path) -> None:
         ingest_request_delay_seconds=0.0,
         fda_user_agent="fda-regulations-tests/0",
     )
-    ingest_result = run_ingest(settings)
+    ingest_result = run_ingest(settings, show_progress=False)
     assert len(ingest_result.documents) == 2
 
     write_corpus_jsonl(ingest_result.documents, tmp_path)

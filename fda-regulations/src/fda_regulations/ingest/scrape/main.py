@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator, Set
+from collections.abc import Callable, Iterator, Set
+from typing import TypedDict
 
 import httpx
 
@@ -17,6 +18,17 @@ from .datatables_listing import (
     extract_view_dom_id,
 )
 from .models import IngestResult, LetterListEntry, RawLetterDocument, utc_now
+from .progress_reporting import scrape_progress_sink, want_show_progress
+
+
+class ListingBatchProgress(TypedDict):
+    """Emitted once per DataTables AJAX page (before detail GETs for those rows)."""
+
+    batch_index: int
+    start: int
+    raw_row_count: int
+    records_filtered: int
+    records_total: int
 
 
 def iter_letter_list_entries(
@@ -25,6 +37,7 @@ def iter_letter_list_entries(
     *,
     max_entries: int | None = None,
     listing_fetch_count: dict[str, int] | None = None,
+    on_listing_batch: Callable[[ListingBatchProgress], None] | None = None,
 ) -> Iterator[tuple[int, LetterListEntry]]:
     """Yield ``(batch_index, entry)`` across DataTables AJAX batches until done or capped.
 
@@ -33,6 +46,9 @@ def iter_letter_list_entries(
 
     If ``listing_fetch_count`` is provided, increment key ``"n"`` on each listing-related
     HTTP GET (shell + each AJAX page).
+
+    If ``on_listing_batch`` is set, it is invoked after each successful AJAX decode and
+    before yielding entries from that page (see :class:`ListingBatchProgress`).
     """
     base = str(settings.ingest_listing_base_url).rstrip("/")
     max_batches = settings.ingest_max_listing_pages
@@ -72,13 +88,24 @@ def iter_letter_list_entries(
         if listing_fetch_count is not None:
             listing_fetch_count["n"] += 1
         response.raise_for_status()
-        _records_total, records_filtered, entries, raw_row_count = decode_datatables_ajax_response(
+        records_total, records_filtered, entries, raw_row_count = decode_datatables_ajax_response(
             response.text,
             page_url=base,
         )
 
         if raw_row_count == 0:
             break
+
+        if on_listing_batch is not None:
+            on_listing_batch(
+                {
+                    "batch_index": batch_index,
+                    "start": start,
+                    "raw_row_count": raw_row_count,
+                    "records_filtered": records_filtered,
+                    "records_total": records_total,
+                }
+            )
 
         for entry in entries:
             if entry.letter_id in seen_ids:
@@ -114,8 +141,13 @@ def _fetch_letter_html(client: httpx.Client, entry: LetterListEntry) -> RawLette
     )
 
 
-def run_ingest(settings: Settings) -> IngestResult:
-    """Discover letters via DataTables AJAX listing, then fetch each detail page HTML."""
+def run_ingest(settings: Settings, *, show_progress: bool | None = None) -> IngestResult:
+    """Discover letters via DataTables AJAX listing, then fetch each detail page HTML.
+
+    When ``show_progress`` is ``True``, or ``None`` and stderr is a TTY, show a Rich
+    progress display on stderr (listing offset + detail GET bar). Set
+    ``show_progress=False`` to disable (e.g. CI or piping logs).
+    """
     max_letters = settings.ingest_max_letters
     if max_letters is not None and max_letters < 1:
         msg = "ingest_max_letters must be >= 1 when set"
@@ -126,21 +158,37 @@ def run_ingest(settings: Settings) -> IngestResult:
     rows_seen = 0
     delay = settings.ingest_request_delay_seconds
     listing_stats: dict[str, int] = {"n": 0}
+    use_progress = want_show_progress(show_progress)
 
-    with build_ingest_client(settings) as client:
-        for _batch_idx, entry in iter_letter_list_entries(
-            client,
-            settings,
-            max_entries=max_letters,
-            listing_fetch_count=listing_stats,
-        ):
-            rows_seen += 1
-            try:
-                documents.append(_fetch_letter_html(client, entry))
-            except httpx.HTTPError as exc:
-                errors.append(f"{entry.letter_id}: {exc!s}")
-            if delay > 0:
-                time.sleep(delay)
+    with scrape_progress_sink(
+        use_progress,
+        incremental=False,
+        max_letters=max_letters,
+    ) as ui:
+
+        def on_listing_batch(info: ListingBatchProgress) -> None:
+            if ui is not None:
+                ui.on_listing_batch(**info)
+
+        with build_ingest_client(settings) as client:
+            for _batch_idx, entry in iter_letter_list_entries(
+                client,
+                settings,
+                max_entries=max_letters,
+                listing_fetch_count=listing_stats,
+                on_listing_batch=on_listing_batch if use_progress else None,
+            ):
+                rows_seen += 1
+                try:
+                    documents.append(_fetch_letter_html(client, entry))
+                    if ui is not None:
+                        ui.on_detail_ok(entry.letter_id)
+                except httpx.HTTPError as exc:
+                    errors.append(f"{entry.letter_id}: {exc!s}")
+                    if ui is not None:
+                        ui.on_detail_error(entry.letter_id)
+                if delay > 0:
+                    time.sleep(delay)
 
     return IngestResult(
         documents=tuple(documents),
@@ -153,6 +201,8 @@ def run_ingest(settings: Settings) -> IngestResult:
 def run_ingest_new_letters(
     settings: Settings,
     existing_letter_ids: Set[str],
+    *,
+    show_progress: bool | None = None,
 ) -> IngestResult:
     """Walk the full warning-letter listing and fetch **only** letters missing from the id set.
 
@@ -165,6 +215,8 @@ def run_ingest_new_letters(
 
     Skipped (already-known) rows still increment ``listing_rows_seen``; returned
     ``documents`` contain **newly fetched** letters only.
+
+    ``show_progress`` matches :func:`run_ingest` (Rich on stderr when TTY unless disabled).
     """
     max_letters = settings.ingest_max_letters
     if max_letters is not None and max_letters < 1:
@@ -176,23 +228,43 @@ def run_ingest_new_letters(
     rows_seen = 0
     delay = settings.ingest_request_delay_seconds
     listing_stats: dict[str, int] = {"n": 0}
+    use_progress = want_show_progress(show_progress)
 
-    with build_ingest_client(settings) as client:
-        for _batch_idx, entry in iter_letter_list_entries(
-            client,
-            settings,
-            max_entries=max_letters,
-            listing_fetch_count=listing_stats,
-        ):
-            rows_seen += 1
-            if entry.letter_id in existing_letter_ids:
-                continue
-            try:
-                documents.append(_fetch_letter_html(client, entry))
-            except httpx.HTTPError as exc:
-                errors.append(f"{entry.letter_id}: {exc!s}")
-            if delay > 0:
-                time.sleep(delay)
+    with scrape_progress_sink(
+        use_progress,
+        incremental=True,
+        max_letters=max_letters,
+    ) as ui:
+
+        def on_listing_batch(info: ListingBatchProgress) -> None:
+            if ui is not None:
+                ui.on_listing_batch(**info)
+
+        with build_ingest_client(settings) as client:
+            for _batch_idx, entry in iter_letter_list_entries(
+                client,
+                settings,
+                max_entries=max_letters,
+                listing_fetch_count=listing_stats,
+                on_listing_batch=on_listing_batch if use_progress else None,
+            ):
+                rows_seen += 1
+                if entry.letter_id in existing_letter_ids:
+                    if ui is not None:
+                        ui.on_skipped_existing()
+                    if delay > 0:
+                        time.sleep(delay)
+                    continue
+                try:
+                    documents.append(_fetch_letter_html(client, entry))
+                    if ui is not None:
+                        ui.on_detail_ok(entry.letter_id)
+                except httpx.HTTPError as exc:
+                    errors.append(f"{entry.letter_id}: {exc!s}")
+                    if ui is not None:
+                        ui.on_detail_error(entry.letter_id)
+                if delay > 0:
+                    time.sleep(delay)
 
     return IngestResult(
         documents=tuple(documents),

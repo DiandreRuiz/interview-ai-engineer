@@ -73,7 +73,7 @@ def test_run_ingest_fetches_listing_then_letter() -> None:
         ingest_request_delay_seconds=0.0,
         fda_user_agent="fda-regulations-tests/0",
     )
-    result = run_ingest(settings)
+    result = run_ingest(settings, show_progress=False)
     assert len(result.documents) == 1
     doc = result.documents[0]
     assert doc.letter_id == "acme-123-01012026"
@@ -118,7 +118,7 @@ def test_run_ingest_new_letters_skips_existing_ids() -> None:
         ingest_request_delay_seconds=0.0,
         fda_user_agent="fda-regulations-tests/0",
     )
-    result = run_ingest_new_letters(settings, {"acme-123-01012026"})
+    result = run_ingest_new_letters(settings, {"acme-123-01012026"}, show_progress=False)
     assert len(result.documents) == 1
     assert result.documents[0].letter_id == "beta-999-01022026"
     assert "BETA" in result.documents[0].html

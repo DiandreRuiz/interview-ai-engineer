@@ -19,6 +19,7 @@ dependencies = [
     "pyright>=1.1.389",
     "pytest>=8.3.0",
     "rank-bm25>=0.2.2",
+    "rich>=13.0",
     "respx>=0.22.0",
     "ruff>=0.8.0",
     "sentence-transformers>=5.4.0",

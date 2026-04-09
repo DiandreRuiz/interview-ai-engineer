@@ -79,6 +79,7 @@ Fetches the FDA warning-letters **hub page** once, then **DataTables AJAX** (`/d
 | `--max-letters N` | Override `INGEST_MAX_LETTERS` for this run (max letters to fetch after discovery). |
 | `--write-corpus` | After scrape, write `letters.jsonl` and `corpus_manifest.json` under the resolved corpus directory (`INGEST_CORPUS_DIR` or `{ARTIFACT_ROOT}/corpus`). |
 | `--preview-dir DIR` | Write one `<letter_id>.txt` per letter (main text from `article#main-content`) under `DIR`. |
+| `--no-progress` | Disable Rich scrape progress on stderr (default is on when stderr is a TTY). |
 
 **Examples:**
 
@@ -93,7 +94,7 @@ uv run fda-scrape --max-pages 2 --max-letters 5 --write-corpus
 uv run fda-scrape --max-pages 2 --max-letters 5 --preview-dir reports/ingest_preview
 ```
 
-**Full-catalog behavior:** leave `INGEST_MAX_LISTING_PAGES` and `INGEST_MAX_LETTERS` **unset** in `.env` and omit `--max-pages` / `--max-letters`. Expect a long, polite run.
+**Full-catalog behavior:** leave `INGEST_MAX_LISTING_PAGES` and `INGEST_MAX_LETTERS` **unset** in `.env` and omit `--max-pages` / `--max-letters`. Expect a long, polite run. On an interactive terminal, **`run_ingest`** shows **Rich** progress (listing row range vs catalog total + detail GET bar); use **`--no-progress`** if you are piping or capturing logs.
 
 If `uv run` still cannot import the package, try `uv sync --reinstall-package fda-regulations` or `PYTHONPATH=src uv run python -m fda_regulations.cli.scrape …`.
 
@@ -115,6 +116,7 @@ Reads letters (from **disk** or from a **live scrape**), runs paragraph chunking
 | `--scrape-first` | Call `run_ingest(settings)` first (live FDA). Uses **current** `Settings`, including `INGEST_MAX_*` caps from `.env` unless unset. |
 | `--write-corpus` | Only meaningful **with** `--scrape-first`: after scraping, write corpus JSONL to `--corpus-dir` / default corpus dir. |
 | `--report PATH` | Write a markdown phase-1 summary (letter count, chunk count, CFR-regex coverage on chunks, paths, model id). |
+| `--no-progress` | With `--scrape-first`, disable Rich scrape progress on stderr. |
 
 **Flows:**
 
@@ -144,7 +146,7 @@ The first run may download the **sentence-transformers** model; indexing is CPU-
 - If **no** new letters: exits without rewriting corpus or index.
 - If there are new letters: merges **existing + new**, rewrites corpus (`source` label `fda-rehydrate`), **rebuilds the full hybrid index** (full re-embed of all chunks).
 
-**Flags:** same shape as `fda-build-index` for `--artifact-root`, `--corpus-dir`, `--embedding-model`, `--report`.
+**Flags:** same shape as `fda-build-index` for `--artifact-root`, `--corpus-dir`, `--embedding-model`, `--report`, plus **`--no-progress`** to disable Rich scrape output.
 
 ```bash
 cd fda-regulations

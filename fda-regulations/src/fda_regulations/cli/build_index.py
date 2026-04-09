@@ -54,6 +54,11 @@ def main() -> None:
         default=None,
         help="Write a markdown phase-1 report to this path.",
     )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="With --scrape-first, disable Rich scrape progress on stderr.",
+    )
     args = parser.parse_args()
 
     settings = Settings()
@@ -73,7 +78,10 @@ def main() -> None:
     if args.scrape_first:
         from fda_regulations.ingest.corpus import write_corpus_jsonl
 
-        ingest_result = run_ingest(settings)
+        ingest_result = run_ingest(
+            settings,
+            show_progress=False if args.no_progress else None,
+        )
         documents = list(ingest_result.documents)
         logging.info("Scraped %s letter document(s).", len(documents))
         if args.write_corpus:
