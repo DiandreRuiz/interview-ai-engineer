@@ -26,7 +26,14 @@ def test_search_no_searchable_tokens(client_relaxed: TestClient) -> None:
     assert response.json()["detail"][0]["loc"] == ["body", "query"]
 
 
-def test_search_with_index_still_empty_stub(client_with_index: TestClient) -> None:
-    response = client_with_index.post("/search", json={"query": "part 211", "top_k": 3})
+def test_search_with_index_returns_hybrid_hits(client_with_index: TestClient) -> None:
+    response = client_with_index.post(
+        "/search",
+        json={"query": "aseptic processing concerns 21 cfr part 211", "top_k": 3},
+    )
     assert response.status_code == 200
-    assert response.json()["hits"] == []
+    hits = response.json()["hits"]
+    assert len(hits) >= 1
+    chunk_ids = [h["chunk_id"] for h in hits]
+    assert "a:0" in chunk_ids
+    assert hits[0]["snippet"]

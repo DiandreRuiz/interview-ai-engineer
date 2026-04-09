@@ -15,3 +15,15 @@ def test_startup_fails_when_manifest_missing(tmp_path: Path) -> None:
     settings = Settings(artifact_root=empty_root, require_artifacts=True)
     with pytest.raises(FileNotFoundError), TestClient(create_app(settings)):
         pass
+
+
+def test_startup_fails_when_manifest_not_hybrid(tmp_path: Path) -> None:
+    root = tmp_path / "partial"
+    root.mkdir()
+    (root / "index_manifest.json").write_text(
+        '{"schema_version": 1}',
+        encoding="utf-8",
+    )
+    settings = Settings(artifact_root=root, require_artifacts=True)
+    with pytest.raises(ValueError, match="hybrid"), TestClient(create_app(settings)):
+        pass

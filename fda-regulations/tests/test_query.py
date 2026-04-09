@@ -1,4 +1,4 @@
-"""Search query normalization (shared with future BM25 + dense indexing)."""
+"""Search query normalization (aligned with BM25 tokenization in the indexer)."""
 
 import pytest
 

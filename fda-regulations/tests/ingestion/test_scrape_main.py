@@ -1,20 +1,32 @@
 """Scrape main runner (`run_ingest`) with RESPX (no live FDA)."""
 
+import re
+
 import httpx
 import respx
 
 from fda_regulations.config import Settings
 from fda_regulations.ingest.scrape import run_ingest
 
-_LISTING_PAGE_0 = """
-<html><body><table>
-<tr><td>01/01/2026</td><td>01/01/2026</td>
-<td><a href="/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/acme-123-01012026">Acme</a></td>
-</tr>
-</table></body></html>
+_LISTING_SHELL = """
+<html><head></head><body>
+<script type="application/json">{"view_dom_id":"test-dom-ingest-1"}</script>
+</body></html>
 """
 
-_LISTING_PAGE_1_EMPTY = "<html><body><table></table></body></html>"
+_AJAX_ROW_ACME = [
+    '<time datetime="2026-01-01T05:00:00Z">01/01/2026</time>',
+    '<time datetime="2026-01-01T05:00:00Z">01/01/2026</time>',
+    (
+        '<a href="/inspections-compliance-enforcement-and-criminal-investigations/'
+        'warning-letters/acme-123-01012026">Acme</a>'
+    ),
+    "Center for X",
+    "Subject line",
+    "",
+    "",
+    "",
+]
 
 _LETTER_BODY = "<html><body><p>WARNING LETTER</p></body></html>"
 
@@ -26,8 +38,18 @@ def test_run_ingest_fetches_listing_then_letter() -> None:
         "https://fda.test/inspections-compliance-enforcement-and-criminal-investigations/"
         "warning-letters/acme-123-01012026"
     )
-    respx.get(f"{base}?page=0").mock(return_value=httpx.Response(200, text=_LISTING_PAGE_0))
-    respx.get(f"{base}?page=1").mock(return_value=httpx.Response(200, text=_LISTING_PAGE_1_EMPTY))
+    respx.get(base).mock(return_value=httpx.Response(200, text=_LISTING_SHELL))
+    respx.get(re.compile(r"^https://fda\.test/datatables/views/ajax\?")).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "draw": 1,
+                "recordsTotal": 1,
+                "recordsFiltered": 1,
+                "data": [_AJAX_ROW_ACME],
+            },
+        )
+    )
     respx.get(letter_url).mock(return_value=httpx.Response(200, text=_LETTER_BODY))
 
     settings = Settings(
