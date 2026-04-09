@@ -53,7 +53,7 @@ coverage.xml
 terminology-notes.md
 
 # Local scraped letter previews (fda-scrape --preview-dir)
-reports/ingest_preview/
+fda-regulations/reports/ingest_preview/
 
 # Batch pipeline outputs (corpus JSONL, BM25, embeddings)
 artifacts/

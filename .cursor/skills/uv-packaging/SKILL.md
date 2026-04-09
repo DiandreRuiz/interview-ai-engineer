@@ -35,7 +35,9 @@ uv is Astral’s Python package and project manager (Rust); it replaces much of 
 
 ## This repo: `fda-regulations/` as the uv project root
 
-The Modicus assignment uses the **`fda-regulations/`** folder as the `uv` project. Either:
+The Modicus assignment uses the **`fda-regulations/`** folder as the `uv` project. **pytest, ruff, pyright, and respx** are listed in **`[project] dependencies`** (not a separate dev group), so **`uv sync`** installs everything needed to run tests and linters.
+
+Either:
 
 ```bash
 cd fda-regulations

@@ -55,7 +55,7 @@ That is a **hybrid RAG** story: sparse + dense retrieval, one fusion step, groun
 
 ## CI (README quality bar)
 
-- **GitHub Actions** (or equivalent): checkout, **`astral-sh/setup-uv`**, **`uv sync --locked --group dev`** from **`fda-regulations/`** (dependency group **`dev`** carries pytest, ruff, pyright, httpx).
+- **GitHub Actions** (or equivalent): checkout, **`astral-sh/setup-uv`**, **`uv sync --locked`** from **`fda-regulations/`** (pytest, ruff, pyright, and respx are main dependencies in **`pyproject.toml`** alongside the service stack).
 - Run **`ruff check`**, **`ruff format --check`**, **`pyright`**, **`pytest`** via **`uv run`**.
 - Default tests: **no live FDA network**; use fixtures. Pin **uv** (and optionally Python) per workflow docs ([uv on GitHub Actions](https://docs.astral.sh/uv/guides/integration/github/)).
 
@@ -146,7 +146,7 @@ To stay explainable in ~5–7 minutes:
 
 **Next step (not implemented):** the script’s “already have” set is **local JSONL** only. A later version could treat **object storage** (S3/GCS) + a remote manifest as source of truth, reuse the same **diff → fetch missing → merge → rebuild** flow, and optionally move to **incremental** vector/BM25 updates if the backing store supports it.
 
-**Why not only `reports/ingest_preview/`?** That directory is for **human QA** (plain text from `--preview-dir`); the canonical store keeps **full HTML** for chunking.
+**Why not only `fda-regulations/reports/ingest_preview/`?** That directory is for **human QA** (plain text from `--preview-dir`); the canonical store keeps **full HTML** for chunking.
 
 **Configuration:** **`INGEST_CORPUS_DIR`** optional override; default **`{ARTIFACT_ROOT}/corpus`** via **`Settings.resolved_ingest_corpus_dir`** — see **`.env.example`**.
 
@@ -180,11 +180,12 @@ See **`fda-regulations/.env.example`**: listing base URL, **`FDA_USER_AGENT`**, 
 
 ## Package layout (suggested)
 
-Keep code inside **`fda-regulations/`** as the `uv` project (including **`scripts/`** for ops); repo root for Docker, `reports/`, CI.
+Keep code and project-local outputs inside **`fda-regulations/`** as the `uv` project (including **`scripts/`** for ops and **`reports/`** for QA previews and phase-1 markdown); repo root for Docker, CI.
 
 ```text
 fda-regulations/
   scripts/               # operational entrypoints (cron); uv run python scripts/… from here
+  reports/               # ingest previews (--preview-dir), optional phase-1 report output
   src/fda_regulations/
     app/                   # FastAPI: lifespan, GET /health, POST /search, Pydantic models
     search/                # Retriever protocol, query prep, bootstrap → HybridRetriever
@@ -195,7 +196,6 @@ fda-regulations/
     chunk_pipeline.py      # corpus → chunks
     cli/                   # ``fda-scrape``, ``fda-build-index``
   tests/
-reports/
 ```
 
 ---
