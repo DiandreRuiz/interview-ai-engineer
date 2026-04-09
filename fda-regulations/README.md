@@ -56,7 +56,7 @@ uv run fda-scrape --max-pages 2 --max-letters 5 --preview-dir ../reports/ingest_
 
 If `uv run fda-scrape` fails to import the package, use `PYTHONPATH=src uv run python -m fda_regulations.cli.scrape …` or run `uv pip install -e .` once from `fda-regulations/`.
 
-See **`context/plans/implementation-plan.md`**, **`src/fda_regulations/ingest/README.md`**, and **`.env.example`**. **CI tests do not call FDA** (fixtures + RESPX).
+See **`context/plans/implementation-plan.md`**, **[`docs/mental-model-code-review.md`](docs/mental-model-code-review.md)** (code-review walkthrough), **`src/fda_regulations/ingest/README.md`**, and **`.env.example`**. **CI tests do not call FDA** (fixtures + RESPX).
 
 ## Persist corpus (JSONL)
 
@@ -84,7 +84,7 @@ uv run fda-build-index --artifact-root ./artifacts --scrape-first --write-corpus
 
 The first run downloads the **sentence-transformers** model named in `INDEX_EMBEDDING_MODEL` (default in `.env.example`); indexing is CPU-friendly and may take a while on a large corpus.
 
-Package map: **`fda_regulations.ingest.scrape`** (fetch), **`fda_regulations.ingest.corpus`** (JSONL I/O), **`fda_regulations.chunking`** (paragraphs + CFR regex metadata on each chunk), **`fda_regulations.index`** (hybrid build/load).
+Package map: **`fda_regulations.ingest.scrape`** (fetch), **`fda_regulations.ingest.corpus`** (JSONL I/O), **`fda_regulations.chunking`** (paragraphs + CFR regex metadata on each chunk), **`fda_regulations.index`** (hybrid build/load). For a layered diagram and interview cheat sheet, see **[`docs/mental-model-code-review.md`](docs/mental-model-code-review.md)**.
 
 ## Next steps (interview — not implemented here)
 
