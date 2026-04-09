@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator
+from collections.abc import Iterator, Set
 
 import httpx
 
@@ -135,6 +135,58 @@ def run_ingest(settings: Settings) -> IngestResult:
             listing_fetch_count=listing_stats,
         ):
             rows_seen += 1
+            try:
+                documents.append(_fetch_letter_html(client, entry))
+            except httpx.HTTPError as exc:
+                errors.append(f"{entry.letter_id}: {exc!s}")
+            if delay > 0:
+                time.sleep(delay)
+
+    return IngestResult(
+        documents=tuple(documents),
+        listing_pages_fetched=listing_stats["n"],
+        listing_rows_seen=rows_seen,
+        fetch_errors=tuple(errors),
+    )
+
+
+def run_ingest_new_letters(
+    settings: Settings,
+    existing_letter_ids: Set[str],
+) -> IngestResult:
+    """Walk the full warning-letter listing and fetch **only** letters missing from the id set.
+
+    Letters whose ``letter_id`` is already in ``existing_letter_ids`` are skipped.
+
+    Listing pagination and HTTP behavior match :func:`run_ingest` (respects
+    ``ingest_max_listing_pages`` / ``ingest_max_letters`` on ``settings``).
+    Callers that need to scan the entire catalog for new slugs should pass a
+    settings object with both caps unset (``None``).
+
+    Skipped (already-known) rows still increment ``listing_rows_seen``; returned
+    ``documents`` contain **newly fetched** letters only.
+    """
+    max_letters = settings.ingest_max_letters
+    if max_letters is not None and max_letters < 1:
+        msg = "ingest_max_letters must be >= 1 when set"
+        raise ValueError(msg)
+
+    documents: list[RawLetterDocument] = []
+    errors: list[str] = []
+    rows_seen = 0
+    delay = settings.ingest_request_delay_seconds
+    listing_stats: dict[str, int] = {"n": 0}
+
+    with build_ingest_client(settings) as client:
+        for _batch_idx, entry in iter_letter_list_entries(
+            client,
+            settings,
+            max_entries=max_letters,
+            listing_fetch_count=listing_stats,
+        ):
+            rows_seen += 1
+            if entry.letter_id in existing_letter_ids:
+                continue
             try:
                 documents.append(_fetch_letter_html(client, entry))
             except httpx.HTTPError as exc:

@@ -12,32 +12,7 @@ from fda_regulations.index.build import build_hybrid_index
 from fda_regulations.ingest.corpus import iter_corpus_letters
 from fda_regulations.ingest.scrape import run_ingest
 from fda_regulations.ingest.scrape.models import RawLetterDocument
-
-
-def _write_report(
-    path: Path,
-    *,
-    letter_count: int,
-    chunk_count: int,
-    chunks_with_cfr: int,
-    embedding_model_id: str,
-    artifact_root: Path,
-    corpus_dir: Path,
-) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    cfr_pct = 0.0 if chunk_count == 0 else 100.0 * chunks_with_cfr / chunk_count
-    lines = [
-        "# Phase 1 ingest / index report",
-        "",
-        f"- **Artifact root:** `{artifact_root}`",
-        f"- **Corpus directory:** `{corpus_dir}`",
-        f"- **Letters indexed:** {letter_count}",
-        f"- **Chunks:** {chunk_count}",
-        f"- **Chunks with ≥1 CFR citation (regex):** {chunks_with_cfr} ({cfr_pct:.1f}%)",
-        f"- **Embedding model:** `{embedding_model_id}`",
-        "",
-    ]
-    path.write_text("\n".join(lines), encoding="utf-8")
+from fda_regulations.reporting import write_phase1_ingest_report
 
 
 def main() -> None:
@@ -125,7 +100,7 @@ def main() -> None:
 
     if args.report is not None:
         with_cfr = sum(1 for c in chunks if len(c.cfr_citations) > 0)
-        _write_report(
+        write_phase1_ingest_report(
             args.report,
             letter_count=len(documents),
             chunk_count=len(chunks),

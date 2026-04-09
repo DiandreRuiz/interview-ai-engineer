@@ -142,6 +142,10 @@ To stay explainable in ~5–7 minutes:
 
 **CLI:** **`fda-scrape --write-corpus`** writes the corpus; **`fda-build-index`** reads it by default (unless **`--scrape-first`**). Implementation: **`fda_regulations.ingest.corpus`**.
 
+**Incremental re-hydrate (operational):** **`fda-regulations/scripts/rehydrate_warning_letters.py`** (run from **`fda-regulations/`** with `uv run python scripts/rehydrate_warning_letters.py`) walks the **full** DataTables listing (ingest caps forced off for that run), calls **`run_ingest_new_letters`** to **GET only letter detail pages** whose **`letter_id`** is not already in **`letters.jsonl`**, then **rewrites** the corpus and **rebuilds** the hybrid index (full re-embed), same artifact contract as **`fda-build-index`**. Intended for **cron** or manual “catch up” jobs.
+
+**Next step (not implemented):** the script’s “already have” set is **local JSONL** only. A later version could treat **object storage** (S3/GCS) + a remote manifest as source of truth, reuse the same **diff → fetch missing → merge → rebuild** flow, and optionally move to **incremental** vector/BM25 updates if the backing store supports it.
+
 **Why not only `reports/ingest_preview/`?** That directory is for **human QA** (plain text from `--preview-dir`); the canonical store keeps **full HTML** for chunking.
 
 **Configuration:** **`INGEST_CORPUS_DIR`** optional override; default **`{ARTIFACT_ROOT}/corpus`** via **`Settings.resolved_ingest_corpus_dir`** — see **`.env.example`**.
@@ -153,7 +157,8 @@ To stay explainable in ~5–7 minutes:
 
 ### Code layout (implemented / evolving)
 
-- **`fda_regulations/ingest/scrape/`** — listing parser, HTTP client, **`main.py`** (`run_ingest`, `iter_letter_list_entries`), Pydantic models for **list rows** and **raw letter documents**; **`fda_regulations.ingest.scrape`** is the public import surface.
+- **`fda_regulations/ingest/scrape/`** — listing parser, HTTP client, **`main.py`** (`run_ingest`, **`run_ingest_new_letters`** for incremental fetch, `iter_letter_list_entries`), Pydantic models for **list rows** and **raw letter documents**; **`fda_regulations.ingest.scrape`** is the public import surface.
+- **`fda-regulations/scripts/`** — **cron-friendly** orchestration (e.g. **`rehydrate_warning_letters.py`**) that composes package APIs; not part of the installed wheel.
 - **`fda_regulations/ingest/corpus.py`** — **`write_corpus_jsonl`**, **`iter_corpus_letters`**, manifest types.
 - **`fda_regulations/chunking/`** — paragraph extraction (`article#main-content` **`<p>`**), CFR regex per chunk, **`ChunkRecord`**.
 - **`fda_regulations/index/`** — **`build_hybrid_index`**, **`load_hybrid_retriever`**, **`HybridRetriever`**, **`HybridIndexManifest`**, RRF helper.
@@ -175,10 +180,11 @@ See **`fda-regulations/.env.example`**: listing base URL, **`FDA_USER_AGENT`**, 
 
 ## Package layout (suggested)
 
-Keep code inside **`fda-regulations/`** as the `uv` project; repo root for Docker, `reports/`, CI.
+Keep code inside **`fda-regulations/`** as the `uv` project (including **`scripts/`** for ops); repo root for Docker, `reports/`, CI.
 
 ```text
 fda-regulations/
+  scripts/               # operational entrypoints (cron); uv run python scripts/… from here
   src/fda_regulations/
     app/                   # FastAPI: lifespan, GET /health, POST /search, Pydantic models
     search/                # Retriever protocol, query prep, bootstrap → HybridRetriever
