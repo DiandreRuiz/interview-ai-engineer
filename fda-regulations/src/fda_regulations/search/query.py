@@ -1,12 +1,11 @@
 """Normalize and tokenize search queries for hybrid retrieval (BM25 + dense).
 
-Rules here must stay aligned with the batch indexer tokenization once chunking
-and BM25 indexing exist (see ``context/plans/implementation-plan.md`` appendix).
+Rules stay aligned with ``fda_regulations.tokenize`` (batch indexer).
 """
 
-import re
-import unicodedata
 from dataclasses import dataclass
+
+from fda_regulations.tokenize import normalize_for_retrieval, tokenize_normalized
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,14 +32,12 @@ def prepare_search_query(raw: str) -> PreparedQuery:
         msg = "query is empty"
         raise ValueError(msg)
 
-    normalized = unicodedata.normalize("NFKC", original)
-    collapsed = " ".join(normalized.split())
-    if not collapsed:
+    text = normalize_for_retrieval(original)
+    if not text:
         msg = "query is empty after normalization"
         raise ValueError(msg)
 
-    text = collapsed.casefold()
-    tokens = tuple(re.findall(r"\w+", text, flags=re.UNICODE))
+    tokens = tokenize_normalized(text)
     if not tokens:
         msg = "query contains no searchable tokens"
         raise ValueError(msg)

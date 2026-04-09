@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from fda_regulations.config import Settings
+from fda_regulations.index.load import is_hybrid_index_manifest, load_hybrid_retriever
 from fda_regulations.search.protocol import Retriever
 from fda_regulations.search.stub import StubRetriever
 
@@ -43,5 +44,11 @@ def load_retriever(settings: Settings) -> Retriever:
         )
         raise ValueError(msg)
 
-    # Hybrid BM25 + dense + RRF adapter will replace this once index load is implemented.
-    return StubRetriever()
+    if is_hybrid_index_manifest(data):
+        return load_hybrid_retriever(root, settings)
+
+    msg = (
+        f"Index manifest at {manifest_path} is missing hybrid fields "
+        f"(index_backend, embedding_model_id). Run: uv run fda-build-index …"
+    )
+    raise ValueError(msg)

@@ -20,8 +20,6 @@ def _to_search_hit(hit: RetrievalHit) -> SearchHit:
         letter_id=hit.letter_id,
         letter_url=hit.letter_url,
         paragraph_index=hit.paragraph_index,
-        taxonomy_label=hit.taxonomy_label,
-        classification_method=hit.classification_method,
     )
 
 
@@ -40,8 +38,6 @@ async def search(request: Request, body: SearchRequest) -> SearchResponse:
         r.search,
         prepared,
         top_k=body.top_k,
-        label_filter=body.label_filter,
-        label_boost=body.label_boost,
     )
 
     return SearchResponse(hits=[_to_search_hit(h) for h in raw_hits])

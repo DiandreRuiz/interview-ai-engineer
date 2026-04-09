@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fda_regulations.site_urls import FDA_WARNING_LETTERS_LISTING_URL
@@ -38,6 +38,10 @@ class Settings(BaseSettings):
         ge=1,
         description="Dense candidate count before fusion.",
     )
+    index_embedding_model: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        description="Sentence-transformers model id used when building the dense index.",
+    )
 
     fda_user_agent: str = Field(
         default="fda-regulations-poc/0.1 (research; contact: local dev)",
@@ -45,11 +49,22 @@ class Settings(BaseSettings):
     )
     ingest_listing_base_url: str = Field(
         default=FDA_WARNING_LETTERS_LISTING_URL,
-        description="FDA warning letters table (paginated with ?page=).",
+        description=(
+            "FDA warning letters hub URL (shell page); letter discovery uses DataTables AJAX "
+            "on the same host."
+        ),
+    )
+    ingest_listing_batch_size: int = Field(
+        default=100,
+        ge=1,
+        le=500,
+        description="DataTables ``length`` parameter (rows per AJAX listing request).",
     )
     ingest_max_listing_pages: int | None = Field(
         default=None,
-        description="Cap listing pages scanned; None = stop at first empty page (full catalog).",
+        description=(
+            "Cap DataTables AJAX batches after the shell GET; None = page until the catalog ends."
+        ),
     )
     ingest_max_letters: int | None = Field(
         default=None,
@@ -60,3 +75,15 @@ class Settings(BaseSettings):
         ge=0.0,
         description="Sleep between HTTP calls to avoid hammering FDA servers.",
     )
+    ingest_corpus_dir: Path | None = Field(
+        default=None,
+        description="Raw scrape JSONL root; default is ARTIFACT_ROOT/corpus.",
+    )
+
+    @computed_field
+    @property
+    def resolved_ingest_corpus_dir(self) -> Path:
+        root = self.artifact_root.expanduser().resolve()
+        if self.ingest_corpus_dir is not None:
+            return self.ingest_corpus_dir.expanduser().resolve()
+        return root / "corpus"

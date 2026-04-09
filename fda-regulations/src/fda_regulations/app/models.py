@@ -4,8 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from fda_regulations.types import ClassificationMethod
-
 
 class HealthResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -30,16 +28,6 @@ class SearchRequest(BaseModel):
         return stripped
 
     top_k: int = Field(default=10, ge=1, le=100)
-    label_filter: str | None = Field(
-        default=None,
-        description="If set, only return chunks with this taxonomy label.",
-    )
-    label_boost: float | None = Field(
-        default=None,
-        ge=0.0,
-        le=1.0,
-        description="Optional boost weight for classified chunks (retriever-specific).",
-    )
 
 
 class SearchHit(BaseModel):
@@ -53,8 +41,6 @@ class SearchHit(BaseModel):
     paragraph_index: int | None = Field(
         description="Paragraph position within the letter body when known.",
     )
-    taxonomy_label: str | None = None
-    classification_method: ClassificationMethod | None = None
 
 
 class SearchResponse(BaseModel):
