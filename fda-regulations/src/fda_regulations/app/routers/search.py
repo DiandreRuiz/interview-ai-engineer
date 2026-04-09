@@ -5,8 +5,9 @@ from typing import cast
 
 from fastapi import APIRouter, HTTPException, Request
 
-from fda_regulations.app.schemas import SearchHit, SearchRequest, SearchResponse
+from fda_regulations.app.models import SearchHit, SearchRequest, SearchResponse
 from fda_regulations.search.protocol import RetrievalHit, Retriever
+from fda_regulations.search.query import prepare_search_query
 
 router = APIRouter(tags=["search"])
 
@@ -26,20 +27,21 @@ def _to_search_hit(hit: RetrievalHit) -> SearchHit:
 
 @router.post("/search", response_model=SearchResponse)
 async def search(request: Request, body: SearchRequest) -> SearchResponse:
-    retriever = getattr(request.app.state, "retriever", None)
-    if retriever is None:
-        raise HTTPException(status_code=503, detail="Search backend not initialized")
-
-    r = cast(Retriever, retriever)
+    r = cast(Retriever, request.app.state.retriever)
     try:
-        raw_hits = await asyncio.to_thread(
-            r.search,
-            body.query,
-            top_k=body.top_k,
-            label_filter=body.label_filter,
-            label_boost=body.label_boost,
-        )
-    except NotImplementedError as exc:
-        raise HTTPException(status_code=501, detail="Search backend not fully implemented") from exc
+        prepared = prepare_search_query(body.query)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=[{"loc": ["body", "query"], "msg": str(exc), "type": "value_error"}],
+        ) from exc
+
+    raw_hits = await asyncio.to_thread(
+        r.search,
+        prepared,
+        top_k=body.top_k,
+        label_filter=body.label_filter,
+        label_boost=body.label_boost,
+    )
 
     return SearchResponse(hits=[_to_search_hit(h) for h in raw_hits])

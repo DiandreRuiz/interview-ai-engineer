@@ -10,14 +10,6 @@ from fda_regulations.config import Settings
 from fda_regulations.search.bootstrap import load_retriever
 
 
-def _index_ready(settings: Settings) -> bool:
-    """True when strict artifact validation ran successfully at startup."""
-    if not settings.require_artifacts:
-        return False
-    manifest = settings.artifact_root.expanduser().resolve() / "index_manifest.json"
-    return manifest.is_file()
-
-
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build the FastAPI app (use this in tests with overridden ``Settings``)."""
     resolved = settings or Settings()
@@ -26,7 +18,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.settings = resolved
         app.state.retriever = load_retriever(resolved)
-        app.state.index_ready = _index_ready(resolved)
+        # Strict mode already validated the manifest inside ``load_retriever``.
+        app.state.index_ready = bool(resolved.require_artifacts)
         yield
 
     app = FastAPI(

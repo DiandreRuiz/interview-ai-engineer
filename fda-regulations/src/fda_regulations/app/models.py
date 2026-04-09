@@ -1,10 +1,10 @@
-"""HTTP request/response models (stable JSON contract for OpenAPI and clients)."""
+"""HTTP API models (Pydantic): request/response bodies and OpenAPI contract."""
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-ClassificationMethod = Literal["cfr_rule", "keyword", "unclassified"]
+from fda_regulations.types import ClassificationMethod
 
 
 class HealthResponse(BaseModel):
@@ -20,6 +20,15 @@ class SearchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     query: str = Field(..., min_length=1, max_length=4000)
+
+    @field_validator("query")
+    @classmethod
+    def strip_non_empty_query(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("query must not be empty or whitespace-only")
+        return stripped
+
     top_k: int = Field(default=10, ge=1, le=100)
     label_filter: str | None = Field(
         default=None,
