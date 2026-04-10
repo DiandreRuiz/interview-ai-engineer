@@ -6,13 +6,19 @@ import argparse
 import logging
 from pathlib import Path
 
+from fda_regulations.cli.ingest_rich_summary import (
+    configure_rich_cli_logging,
+    ingest_console_stdout,
+    print_ingest_completion_report,
+    print_run_banner,
+)
 from fda_regulations.config import Settings
 from fda_regulations.ingest.corpus import write_corpus_jsonl
 from fda_regulations.ingest.scrape import extract_warning_letter_main_text, run_ingest
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    configure_rich_cli_logging()
     parser = argparse.ArgumentParser(
         description="Scrape FDA warning letters: DataTables listing + per-letter HTML GETs.",
     )
@@ -42,11 +48,6 @@ def main() -> None:
             "(INGEST_CORPUS_DIR or ARTIFACT_ROOT/corpus)."
         ),
     )
-    parser.add_argument(
-        "--no-progress",
-        action="store_true",
-        help="Disable Rich scrape progress on stderr (e.g. when capturing full logs).",
-    )
     args = parser.parse_args()
     settings = Settings()
     overrides: dict[str, int] = {}
@@ -57,13 +58,18 @@ def main() -> None:
     if overrides:
         settings = settings.model_copy(update=overrides)
 
-    result = run_ingest(settings, show_progress=False if args.no_progress else None)
+    out = ingest_console_stdout()
+    print_run_banner(out, "FDA scrape", "Live listing + detail GETs · stderr = Rich progress")
+
+    result = run_ingest(settings)
     logging.info("Fetched %s letter document(s).", len(result.documents))
     logging.info("Listing HTTP GETs (shell + DataTables): %s", result.listing_pages_fetched)
     logging.info("Listing rows iterated: %s", result.listing_rows_seen)
     if result.fetch_errors:
         first = result.fetch_errors[0]
         logging.warning("%s fetch error(s), e.g. %s", len(result.fetch_errors), first)
+
+    print_ingest_completion_report(out, result, run_label="fda-scrape")
 
     if args.write_corpus:
         stats = write_corpus_jsonl(result.documents, settings.resolved_ingest_corpus_dir)

@@ -6,7 +6,15 @@ import argparse
 import logging
 from pathlib import Path
 
+from rich.panel import Panel
+
 from fda_regulations.chunk_pipeline import raw_letters_to_chunks
+from fda_regulations.cli.ingest_rich_summary import (
+    configure_rich_cli_logging,
+    ingest_console_stdout,
+    print_ingest_completion_report,
+    print_run_banner,
+)
 from fda_regulations.config import Settings
 from fda_regulations.index.build import build_hybrid_index
 from fda_regulations.ingest.corpus import iter_corpus_letters
@@ -16,7 +24,7 @@ from fda_regulations.reporting import write_phase1_ingest_report
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    configure_rich_cli_logging()
     parser = argparse.ArgumentParser(
         description="Build hybrid BM25 + dense index from corpus JSONL (or scrape first).",
     )
@@ -54,11 +62,6 @@ def main() -> None:
         default=None,
         help="Write a markdown phase-1 report to this path.",
     )
-    parser.add_argument(
-        "--no-progress",
-        action="store_true",
-        help="With --scrape-first, disable Rich scrape progress on stderr.",
-    )
     args = parser.parse_args()
 
     settings = Settings()
@@ -74,14 +77,16 @@ def main() -> None:
     )
     model_id = args.embedding_model or settings.index_embedding_model
 
+    out = ingest_console_stdout()
     documents: list[RawLetterDocument]
+    ingest_result_for_report = None
     if args.scrape_first:
         from fda_regulations.ingest.corpus import write_corpus_jsonl
 
-        ingest_result = run_ingest(
-            settings,
-            show_progress=False if args.no_progress else None,
-        )
+        print_run_banner(out, "fda-build-index", "Scrape-first · then chunk + hybrid index")
+
+        ingest_result = run_ingest(settings)
+        ingest_result_for_report = ingest_result
         documents = list(ingest_result.documents)
         logging.info("Scraped %s letter document(s).", len(documents))
         if args.write_corpus:
@@ -104,6 +109,25 @@ def main() -> None:
         artifact_root,
         manifest.chunk_count,
         manifest.embedding_model_id,
+    )
+
+    if ingest_result_for_report is not None:
+        print_ingest_completion_report(
+            out,
+            ingest_result_for_report,
+            run_label="fda-build-index · scrape-first",
+            local_letters_after=len(documents),
+        )
+
+    out.print()
+    out.print(
+        Panel.fit(
+            f"[bold cyan]fda-build-index[/] complete\n"
+            f"[white]Letters:[/] {len(documents)}  ·  [white]Chunks:[/] {len(chunks)}  ·  "
+            f"[white]Model:[/] {manifest.embedding_model_id}\n"
+            f"[white]Index:[/] {artifact_root}",
+            border_style="cyan",
+        )
     )
 
     if args.report is not None:
