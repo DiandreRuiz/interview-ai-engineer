@@ -1,4 +1,4 @@
-"""Rich-based stderr progress for live FDA scraping (TTY only by default)."""
+"""Rich-based stderr progress for live FDA scraping."""
 
 from __future__ import annotations
 
@@ -19,13 +19,9 @@ from rich.progress import (
 )
 
 
-def want_show_progress(show_progress: bool | None) -> bool:
-    """Resolve whether to show Rich progress: explicit flag, else stderr TTY."""
-    if show_progress is False:
-        return False
-    if show_progress is True:
-        return True
-    return sys.stderr.isatty()
+def _stderr_console() -> Console:
+    """Rich on stderr; force styles when piped so CI/logs still get markup."""
+    return Console(stderr=True, force_terminal=not sys.stderr.isatty())
 
 
 def _short_id(letter_id: str, *, max_len: int = 52) -> str:
@@ -54,7 +50,7 @@ class _RichScrapeProgress:
             BarColumn(bar_width=40),
             TaskProgressColumn(),
             TimeElapsedColumn(),
-            console=Console(stderr=True),
+            console=_stderr_console(),
         )
         self._progress = self._cm.__enter__()
         self._scan_tid = self._progress.add_task("[cyan]Catalog[/]", total=None)
@@ -158,14 +154,10 @@ class _RichScrapeProgress:
 
 @contextmanager
 def scrape_progress_sink(
-    enabled: bool,
     *,
     incremental: bool,
     max_letters: int | None,
-) -> Iterator[_RichScrapeProgress | None]:
-    if not enabled:
-        yield None
-        return
+) -> Iterator[_RichScrapeProgress]:
     ui = _RichScrapeProgress(incremental=incremental, max_letters=max_letters)
     with ui:
         yield ui

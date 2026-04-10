@@ -9,7 +9,7 @@ Batch ingest helpers: **scrape** (listing + detail HTML) and **corpus** persiste
 | Module | Role |
 |--------|------|
 | **`scrape/__init__.py`** | Public re-exports; start here. |
-| **`scrape/main.py`** | Primary runner: shell GET + DataTables AJAX pagination, dedupe slugs, GET each letter HTML → `IngestResult` (`run_ingest`, `iter_letter_list_entries`). Optional **`scrape/progress_reporting.py`**: Rich stderr progress when TTY (`show_progress` on `run_ingest` / `run_ingest_new_letters`). |
+| **`scrape/main.py`** | Primary runner: shell GET + DataTables AJAX pagination, dedupe slugs, GET each letter HTML → `IngestResult` (`run_ingest`, `iter_letter_list_entries`). **`scrape/progress_reporting.py`**: Rich stderr progress (always on for listing + detail GETs). |
 | **`scrape/datatables_listing.py`** | Build AJAX query params, parse JSON `data` rows → `LetterListEntry`; read `view_dom_id` from shell HTML. |
 | **`scrape/listing.py`** | Parse static FDA listing HTML table → `LetterListEntry` (fixtures / legacy HTML only). |
 | **`scrape/letter_text.py`** | Strip `article#main-content` → plain text (preview / chunking input). |

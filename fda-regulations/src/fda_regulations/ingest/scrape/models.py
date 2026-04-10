@@ -39,6 +39,18 @@ class IngestResult(BaseModel):
     )
     listing_rows_seen: int
     fetch_errors: tuple[str, ...]
+    catalog_records_filtered: int | None = Field(
+        default=None,
+        description="Last DataTables recordsFiltered (Solr view total for current filters).",
+    )
+    catalog_records_total: int | None = Field(
+        default=None,
+        description="Last DataTables recordsTotal from the listing API.",
+    )
+    listing_raw_rows_traversed: int | None = Field(
+        default=None,
+        description=("Sum of raw ``data`` row counts across listing pages (pagination coverage)."),
+    )
 
 
 def utc_now() -> datetime:
