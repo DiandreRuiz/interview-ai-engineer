@@ -35,7 +35,7 @@ uv is Astral’s Python package and project manager (Rust); it replaces much of 
 
 ## This repo: `fda-regulations/` as the uv project root
 
-The Modicus assignment uses the **`fda-regulations/`** folder as the `uv` project. **pytest, ruff, pyright, and respx** are listed in **`[project] dependencies`** (not a separate dev group). Use plain **`uv sync`**: **setuptools** with **`[tool.uv] config-settings = { editable_mode = "strict" }`** keeps default editable installs working with **`uv run`** on **macOS + Python 3.13**.
+The Modicus assignment uses the **`fda-regulations/`** folder as the `uv` project. **pytest, ruff, pyright, and respx** are listed in **`[project] dependencies`** (not a separate dev group). **Build backend:** **Hatchling** with a **`src/`** layout. **Local setup:** **`cp .env.example .env`** then **`uv sync`** — **`.env`** sets **`PYTHONPATH=src`** so **`uv run`** imports the package reliably (some **macOS** Python builds skip UF_HIDDEN **`.pth`** files; see [cpython#148121](https://github.com/python/cpython/issues/148121)). **pytest** uses **`pythonpath = ["src"]`** so CI does not need `.env`.
 
 Either:
 
