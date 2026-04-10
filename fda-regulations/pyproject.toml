@@ -16,21 +16,33 @@ dependencies = [
     "numpy>=2.4.4",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.6.0",
-    "pyright>=1.1.389",
-    "pytest>=8.3.0",
     "rank-bm25>=0.2.2",
     "rich>=13.0",
-    "respx>=0.22.0",
-    "ruff>=0.8.0",
     "sentence-transformers>=5.4.0",
     "torch>=2.11.0",
     "uvicorn[standard]>=0.32.0",
+]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.389",
+    "pytest>=8.3.0",
+    "respx>=0.22.0",
+    "ruff>=0.8.0",
 ]
 
 [project.scripts]
 fda-scrape = "fda_regulations.cli.scrape:main"
 fda-build-index = "fda_regulations.cli.build_index:main"
 fda-rehydrate = "fda_regulations.cli.rehydrate:main"
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fda_regulations"]
