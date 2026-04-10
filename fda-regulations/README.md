@@ -11,12 +11,13 @@ Python 3.13 package for the Modicus takehome: warning-letter ingest, hybrid retr
 From this directory:
 
 ```bash
+cp .env.example .env
 uv sync
 ```
 
-The project uses **setuptools** with **PEP 660 strict** editable installs (`[tool.uv] config-settings` in `pyproject.toml`), so the default **`uv sync`** path keeps live edits under `src/` while **`uv run …`** console scripts import reliably on **macOS + Python 3.13** (a plain Hatchling editable was hitting skipped **`.pth`** behavior there).
+**`.env`:** `uv run` loads it automatically (in addition to **`pydantic-settings`** for the app). It includes **`PYTHONPATH=src`** so imports work everywhere; on some **macOS** setups, Python **ignores “hidden” `.pth` files** in `site-packages`, which would otherwise break editable installs (see [cpython#148121](https://github.com/python/cpython/issues/148121)). **CI** does not rely on `.env`: **`pytest`** uses `pythonpath = ["src"]` in `pyproject.toml`.
 
-Copy `.env.example` to `.env` if you want non-default settings. For local development **without** a built index, set `REQUIRE_ARTIFACTS=false` in `.env`.
+For local development **without** a built index, set `REQUIRE_ARTIFACTS=false` in `.env`.
 
 ---
 
@@ -35,10 +36,11 @@ Human-readable **text previews** from `--preview-dir` go under `reports/ingest_p
 
 ## Environment variables (see `.env.example`)
 
-All batch CLIs and the API read **`fda_regulations.config.Settings`** (pydantic-settings), including from `.env` when present.
+All batch CLIs and the API read **`fda_regulations.config.Settings`** (pydantic-settings), including from `.env` when present. `uv run` also loads `.env` (see Setup).
 
 | Variable | Purpose |
 |----------|---------|
+| `PYTHONPATH` | Set to `src` in `.env.example`. Ensures the `src/` layout is importable via `uv run` (see Setup). Not read by application code. |
 | `ARTIFACT_ROOT` | Root for **index** files and default `{ARTIFACT_ROOT}/corpus` unless overridden. |
 | `INGEST_CORPUS_DIR` | Optional override for corpus directory (default: `{ARTIFACT_ROOT}/corpus`). |
 | `REQUIRE_ARTIFACTS` | If `true`, FastAPI startup requires a valid hybrid `index_manifest.json` under `ARTIFACT_ROOT`. |
@@ -60,10 +62,13 @@ Console scripts are registered in `pyproject.toml` under `[project.scripts]`:
 |---------|------------------|
 | `fda-scrape` | `fda_regulations.cli.scrape:main` |
 | `fda-build-index` | `fda_regulations.cli.build_index:main` |
+| `fda-rehydrate` | `fda_regulations.cli.rehydrate:main` |
 
 Run **`uv run <command> --help`** anytime for argparse text that matches the code.
 
-**Operational script** (not an installed console script): `scripts/rehydrate_warning_letters.py` — run with `uv run python scripts/rehydrate_warning_letters.py …` from this directory.
+**Scripts:** `scripts/rehydrate_warning_letters.py` is a thin wrapper around **`fda-rehydrate`** (for cron paths that invoke a file); prefer **`uv run fda-rehydrate`**.
+
+Batch CLIs use **Rich** throughout: **`RichHandler`** for `logging` on stderr, **Rich progress** during live scrapes, and **panels / tables** on stdout for milestones and summaries.
 
 ---
 
@@ -79,7 +84,6 @@ Fetches the FDA warning-letters **hub page** once, then **DataTables AJAX** (`/d
 | `--max-letters N` | Override `INGEST_MAX_LETTERS` for this run (max letters to fetch after discovery). |
 | `--write-corpus` | After scrape, write `letters.jsonl` and `corpus_manifest.json` under the resolved corpus directory (`INGEST_CORPUS_DIR` or `{ARTIFACT_ROOT}/corpus`). |
 | `--preview-dir DIR` | Write one `<letter_id>.txt` per letter (main text from `article#main-content`) under `DIR`. |
-| `--no-progress` | Disable Rich scrape progress on stderr (default is on when stderr is a TTY). |
 
 **Examples:**
 
@@ -94,9 +98,9 @@ uv run fda-scrape --max-pages 2 --max-letters 5 --write-corpus
 uv run fda-scrape --max-pages 2 --max-letters 5 --preview-dir reports/ingest_preview
 ```
 
-**Full-catalog behavior:** leave `INGEST_MAX_LISTING_PAGES` and `INGEST_MAX_LETTERS` **unset** in `.env` and omit `--max-pages` / `--max-letters`. Expect a long, polite run. On an interactive terminal, **`run_ingest`** shows **Rich** progress (listing row range vs catalog total + detail GET bar); use **`--no-progress`** if you are piping or capturing logs.
+**Full-catalog behavior:** leave `INGEST_MAX_LISTING_PAGES` and `INGEST_MAX_LETTERS` **unset** in `.env` and omit `--max-pages` / `--max-letters`. Expect a long, polite run. **`run_ingest`** always shows **Rich** progress on stderr (listing row range vs catalog total + detail GET bar); stdout gets a banner and completion table after the run.
 
-If `uv run` still cannot import the package, try `uv sync --reinstall-package fda-regulations` or `PYTHONPATH=src uv run python -m fda_regulations.cli.scrape …`.
+If `uv run` cannot import the package, confirm `.env` exists (copy from `.env.example`) so `PYTHONPATH=src` is set, then run `uv sync` again.
 
 **CI:** tests do **not** call the live FDA network (fixtures + RESPX). See `src/fda_regulations/ingest/README.md` for scrape internals.
 
@@ -116,7 +120,6 @@ Reads letters (from **disk** or from a **live scrape**), runs paragraph chunking
 | `--scrape-first` | Call `run_ingest(settings)` first (live FDA). Uses **current** `Settings`, including `INGEST_MAX_*` caps from `.env` unless unset. |
 | `--write-corpus` | Only meaningful **with** `--scrape-first`: after scraping, write corpus JSONL to `--corpus-dir` / default corpus dir. |
 | `--report PATH` | Write a markdown phase-1 summary (letter count, chunk count, CFR-regex coverage on chunks, paths, model id). |
-| `--no-progress` | With `--scrape-first`, disable Rich scrape progress on stderr. |
 
 **Flows:**
 
@@ -135,22 +138,22 @@ The first run may download the **sentence-transformers** model; indexing is CPU-
 
 ---
 
-## `scripts/rehydrate_warning_letters.py` — incremental catch-up
+## `fda-rehydrate` — incremental catch-up
 
 **When to use:** you already have a corpus and want **only new** warning letters (by `letter_id` slug) without re-fetching the whole catalog’s HTML.
 
 **Behavior:**
 
 - Loads existing `letters.jsonl` (if present); builds the set of known `letter_id`s.
-- Runs **`run_ingest_new_letters`**, which scans the **full** listing but **skips** detail GETs for ids already in the corpus. For this script, **`INGEST_MAX_LISTING_PAGES` and `INGEST_MAX_LETTERS` are forced off** so every listing row can be considered.
+- Runs **`run_ingest_new_letters`**, which scans the **full** listing but **skips** detail GETs for ids already in the corpus. **`INGEST_MAX_LISTING_PAGES` and `INGEST_MAX_LETTERS` are forced off** for this command so every listing row can be considered.
 - If **no** new letters: exits without rewriting corpus or index.
 - If there are new letters: merges **existing + new**, rewrites corpus (`source` label `fda-rehydrate`), **rebuilds the full hybrid index** (full re-embed of all chunks).
 
-**Flags:** same shape as `fda-build-index` for `--artifact-root`, `--corpus-dir`, `--embedding-model`, `--report`, plus **`--no-progress`** to disable Rich scrape output.
+**Flags:** same shape as `fda-build-index` for `--artifact-root`, `--corpus-dir`, `--embedding-model`, and `--report`.
 
 ```bash
 cd fda-regulations
-uv run python scripts/rehydrate_warning_letters.py --artifact-root ./artifacts
+uv run fda-rehydrate --artifact-root ./artifacts
 ```
 
 Prefer running from **`fda-regulations/`** so `.env` resolves correctly.
@@ -163,17 +166,18 @@ Prefer running from **`fda-regulations/`** so `.env` resolves correctly.
 
 | Goal | Command |
 |------|---------|
-| Install dependencies | `uv sync` |
+| Install dependencies | `cp .env.example .env` then `uv sync` |
 | Lint / types / tests | `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run pytest` |
 | Small scrape (no corpus file) | `uv run fda-scrape --max-pages 2 --max-letters 5` |
 | Build index from existing corpus | `uv run fda-build-index --artifact-root ./artifacts` |
 | Full pipeline: scrape + corpus + index + report | `uv run fda-build-index --artifact-root ./artifacts --scrape-first --write-corpus --report reports/phase1.md` |
-| Add only new letters + rebuild index | `uv run python scripts/rehydrate_warning_letters.py --artifact-root ./artifacts` |
-| Run API | `uv run uvicorn fda_regulations.app.main:app --reload --host 0.0.0.0 --port 8000` |
+| Add only new letters + rebuild index | `uv run fda-rehydrate --artifact-root ./artifacts` |
+| Run API | `uv run uvicorn fda_regulations.app.main:app --reload --host 0.0.0.0 --port 8000` (needs `.env` in this directory so `PYTHONPATH=src` is set) |
 
 From the repository root (monorepo):
 
 ```bash
+cp fda-regulations/.env.example fda-regulations/.env
 uv --directory fda-regulations sync
 uv --directory fda-regulations run pytest
 ```
@@ -181,6 +185,8 @@ uv --directory fda-regulations run pytest
 ---
 
 ## Run the API
+
+From **`fda-regulations/`**, with **`.env`** present (see **Setup** — `uv run` loads it):
 
 ```bash
 uv run uvicorn fda_regulations.app.main:app --reload --host 0.0.0.0 --port 8000
