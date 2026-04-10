@@ -53,11 +53,19 @@ That is a **hybrid RAG** story: sparse + dense retrieval, one fusion step, groun
 
 ---
 
-## CI (README quality bar)
+## CI (implemented)
 
-- **GitHub Actions** (or equivalent): checkout, **`astral-sh/setup-uv`**, **`uv sync --locked`** from **`fda-regulations/`** (pytest, ruff, pyright, and respx are main dependencies in **`pyproject.toml`**). **Local:** copy **`.env.example` → `.env`** so **`uv run`** picks up **`PYTHONPATH=src`** (uv loads `.env` by default; avoids macOS cases where **hidden `.pth` files** in `site-packages` are skipped—see [cpython#148121](https://github.com/python/cpython/issues/148121)). **pytest** also sets **`pythonpath = ["src"]`** so CI does not require a `.env` file.
-- Run **`ruff check`**, **`ruff format --check`**, **`pyright`**, **`pytest`** via **`uv run`**.
+- **GitHub Actions** workflow at **`.github/workflows/ci.yml`**: checkout → **`astral-sh/setup-uv@v7`** (pinned **`version: "0.11.4"`**, **`enable-cache: true`**) → **`uv sync --locked`** from **`fda-regulations/`** → **`ruff check`**, **`ruff format --check`**, **`pyright`**, **`pytest`** via **`uv run`**. Triggers on push/PR to `main`. Dev tools (pytest, ruff, pyright, respx) are in **`[dependency-groups] dev`**; production deps in **`[project.dependencies]`**.
+- **Local:** copy **`.env.example` → `.env`** so **`uv run`** picks up **`PYTHONPATH=src`** (uv loads `.env` by default; avoids macOS cases where **hidden `.pth` files** in `site-packages` are skipped—see [cpython#148121](https://github.com/python/cpython/issues/148121)). **pytest** also sets **`pythonpath = ["src"]`** so CI does not require a `.env` file.
 - Default tests: **no live FDA network**; use fixtures. Pin **uv** (and optionally Python) per workflow docs ([uv on GitHub Actions](https://docs.astral.sh/uv/guides/integration/github/)).
+
+---
+
+## Docker (implemented)
+
+**`Dockerfile`** at the repo root — two-stage build: **builder** installs `uv` + production deps (`uv sync --locked --no-dev`); **runtime** copies `.venv` + `src/` into `python:3.13-slim-bookworm`, non-root user, `HEALTHCHECK` against `/health` (60 s start period for index load). **`docker-compose.yml`** bind-mounts **`fda-regulations/artifacts/`** read-only into the container at `/app/artifacts` so index artifacts are not baked into the image. **`.dockerignore`** excludes `.git`, `.venv`, artifacts, reports, and planning files from the build context.
+
+**Reviewer command:** `docker compose up --build` from the repo root (requires artifacts built on the host first via `fda-build-index`).
 
 ---
 
@@ -65,9 +73,9 @@ That is a **hybrid RAG** story: sparse + dense retrieval, one fusion step, groun
 
 These are **deliberately out of scope** for the shipped code so the story stays **ingest → chunk → hybrid index → search**. They are easy to justify as **what we would add next** to make the system more useful or to defend design choices in review.
 
-### 1. CFR citation metadata per chunk (already stored; not used in retrieval)
+### 1. CFR citation metadata per chunk (stored and returned in search; not used in ranking)
 
-**In code today:** [`fda_regulations.chunking.cfr`](../../fda-regulations/src/fda_regulations/chunking/cfr.py) runs **deterministic pattern extraction** (lightweight regex-style rules) over each paragraph’s text and stores **deduplicated citation-shaped substrings** on **`ChunkRecord.cfr_citations`** (per chunk only, not a global registry). They are written to **`chunks.jsonl`** and feed **phase-1 report** stats (share of chunks with at least one hit). **`POST /search` does not return them**; **BM25 / embeddings ignore them**—retrieval is text-only.
+**In code today:** [`fda_regulations.chunking.cfr`](../../fda-regulations/src/fda_regulations/chunking/cfr.py) runs **deterministic pattern extraction** (lightweight regex-style rules) over each paragraph’s text and stores **deduplicated citation-shaped substrings** on **`ChunkRecord.cfr_citations`** (per chunk only, not a global registry). They are written to **`chunks.jsonl`** and feed **phase-1 report** stats (share of chunks with at least one hit). **`POST /search` returns `cfr_citations` per hit** (added to `RetrievalHit` → `SearchHit`); **BM25 / embeddings ignore them**—retrieval ranking is text-only.
 
 **Interview — scope boundary (CFR):** We **maximize recall of citation-shaped strings** for **downstream** use (boosts, UI, analytics, weak labels). We **do not** validate cites against **eCFR** or a GPO snapshot (no “this part/section existed on date *D*” guarantee). That **resolution / validation layer is explicitly out of scope** for this PoC; say so in code review and point to the **Next step** bullet below for how you’d add it. In interviews it is also fair to ask **how the company** handles regulatory cite resolution today and whether they standardize on a vendor tool, in-house grammar, or eCFR-backed services.
 
@@ -248,7 +256,7 @@ See **`fda-regulations/.env.example`**: listing base URL, **`FDA_USER_AGENT`**, 
 
 ## Package layout (suggested)
 
-Keep code and project-local outputs inside **`fda-regulations/`** as the `uv` project (including **`scripts/`** for ops and **`reports/`** for QA previews and phase-1 markdown); repo root for Docker, CI.
+Keep code and project-local outputs inside **`fda-regulations/`** as the `uv` project (including **`scripts/`** for ops and **`reports/`** for QA previews and phase-1 markdown); repo root for **`Dockerfile`**, **`docker-compose.yml`**, **`.dockerignore`**, and CI.
 
 ```text
 fda-regulations/
@@ -337,4 +345,4 @@ Apply only to **top N** after fusion (e.g. 20–50). On CPU PoCs it is often ski
 ### Grounding and observability (reminder)
 
 - Every hit: **snippet + citation** (letter URL, `chunk_id` / paragraph identity).
-- **Logs:** query, latency, top `chunk_id`s; **Langfuse** only if we add it and document it here.
+- **Logs (implemented):** The search route (`app/routers/search.py`) logs every query at **INFO** with `query`, `top_k`, `results`, `latency_ms`, and top-5 `chunk_id`s via stdlib `logging`. **Langfuse** only if we add it and document it here.
