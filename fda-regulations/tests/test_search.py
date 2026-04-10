@@ -37,3 +37,6 @@ def test_search_with_index_returns_hybrid_hits(client_with_index: TestClient) ->
     chunk_ids = [h["chunk_id"] for h in hits]
     assert "a:0" in chunk_ids
     assert hits[0]["snippet"]
+
+    hit_a = next(h for h in hits if h["chunk_id"] == "a:0")
+    assert "21 CFR Part 211" in hit_a["cfr_citations"]

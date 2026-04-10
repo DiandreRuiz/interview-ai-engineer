@@ -41,6 +41,10 @@ class SearchHit(BaseModel):
     paragraph_index: int | None = Field(
         description="Paragraph position within the letter body when known.",
     )
+    cfr_citations: tuple[str, ...] = Field(
+        default=(),
+        description="21 CFR citation strings extracted from the chunk text (regex metadata).",
+    )
 
 
 class SearchResponse(BaseModel):

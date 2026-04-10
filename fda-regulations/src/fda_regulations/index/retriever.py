@@ -81,6 +81,7 @@ class HybridRetriever:
                     letter_id=ch.letter_id,
                     letter_url=ch.letter_url,
                     paragraph_index=ch.paragraph_index,
+                    cfr_citations=ch.cfr_citations,
                 )
             )
             if len(hits) >= top_k:

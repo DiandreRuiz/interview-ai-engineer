@@ -14,6 +14,7 @@ class RetrievalHit:
     letter_id: str
     letter_url: str
     paragraph_index: int | None
+    cfr_citations: tuple[str, ...]
 
 
 class Retriever(Protocol):

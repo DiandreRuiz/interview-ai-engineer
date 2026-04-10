@@ -1,6 +1,8 @@
 """Hybrid search endpoint (thin handler → retriever protocol)."""
 
 import asyncio
+import logging
+import time
 from typing import cast
 
 from fastapi import APIRouter, HTTPException, Request
@@ -10,6 +12,7 @@ from fda_regulations.search.protocol import RetrievalHit, Retriever
 from fda_regulations.search.query import prepare_search_query
 
 router = APIRouter(tags=["search"])
+log = logging.getLogger(__name__)
 
 
 def _to_search_hit(hit: RetrievalHit) -> SearchHit:
@@ -20,6 +23,7 @@ def _to_search_hit(hit: RetrievalHit) -> SearchHit:
         letter_id=hit.letter_id,
         letter_url=hit.letter_url,
         paragraph_index=hit.paragraph_index,
+        cfr_citations=hit.cfr_citations,
     )
 
 
@@ -34,10 +38,21 @@ async def search(request: Request, body: SearchRequest) -> SearchResponse:
             detail=[{"loc": ["body", "query"], "msg": str(exc), "type": "value_error"}],
         ) from exc
 
+    t0 = time.perf_counter()
     raw_hits = await asyncio.to_thread(
         r.search,
         prepared,
         top_k=body.top_k,
     )
+    latency_ms = (time.perf_counter() - t0) * 1000
 
-    return SearchResponse(hits=[_to_search_hit(h) for h in raw_hits])
+    hits = [_to_search_hit(h) for h in raw_hits]
+    log.info(
+        "query=%r top_k=%d results=%d latency_ms=%.1f top_chunks=%s",
+        body.query[:120],
+        body.top_k,
+        len(hits),
+        latency_ms,
+        [h.chunk_id for h in hits[:5]],
+    )
+    return SearchResponse(hits=hits)
