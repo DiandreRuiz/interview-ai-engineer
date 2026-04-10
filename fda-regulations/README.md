@@ -172,7 +172,8 @@ Prefer running from **`fda-regulations/`** so `.env` resolves correctly.
 | Build index from existing corpus | `uv run fda-build-index --artifact-root ./artifacts` |
 | Full pipeline: scrape + corpus + index + report | `uv run fda-build-index --artifact-root ./artifacts --scrape-first --write-corpus --report reports/phase1.md` |
 | Add only new letters + rebuild index | `uv run fda-rehydrate --artifact-root ./artifacts` |
-| Run API | `uv run uvicorn fda_regulations.app.main:app --reload --host 0.0.0.0 --port 8000` (needs `.env` in this directory so `PYTHONPATH=src` is set) |
+| Run API (native) | `uv run uvicorn fda_regulations.app.main:app --reload --host 0.0.0.0 --port 8000` (needs `.env` in this directory so `PYTHONPATH=src` is set) |
+| Run API (Docker) | `docker compose up --build` from the **repository root** (requires artifacts built first; see Docker section below) |
 
 From the repository root (monorepo):
 
@@ -200,6 +201,28 @@ With `REQUIRE_ARTIFACTS=true` (default), startup loads a **hybrid** index from `
 
 ---
 
+## Docker
+
+The API runs in Docker via a two-stage build (`Dockerfile` at the repository root). Stage 1 installs production dependencies with `uv`; Stage 2 copies only the `.venv` and source into a slim runtime image with a non-root user.
+
+**Prerequisites:** build the index artifacts on the host first (see `fda-build-index` above). The container bind-mounts `fda-regulations/artifacts/` read-only at runtime — artifacts are not baked into the image.
+
+From the **repository root**:
+
+```bash
+docker compose up --build
+```
+
+- API available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- Health: `GET /health`
+- Search: `POST /search` with `{"query": "…", "top_k": 10}`
+
+The `docker-compose.yml` sets `ARTIFACT_ROOT=/app/artifacts` and `REQUIRE_ARTIFACTS=true`. Startup loads the hybrid index (BM25 + embeddings); the healthcheck accounts for the ~60 s cold-start on large indexes.
+
+To stop: `docker compose down`.
+
+---
+
 ## Package map
 
 | Area | Package / module |
@@ -217,5 +240,5 @@ With `REQUIRE_ARTIFACTS=true` (default), startup loads a **hybrid** index from `
 
 For **what we would add next** after this PoC, see **`context/plans/implementation-plan.md`** → “Next steps (not in PoC — say this in interviews)”:
 
-1. **CFR strings per chunk** — already stored as metadata (`cfr_citations`); retrieval ignores them today; you can describe using them for richer citations, boosts, or filters later.
+1. **CFR strings per chunk** — stored as metadata (`cfr_citations`) and returned in `POST /search` responses; retrieval ranking ignores them today but they enable downstream filtering, boosting, or citation display.
 2. **Taxonomy / weak supervision** — the older plan (small label vocab, CFR-prefix rules + keyword overlap, optional search filter/boost) we dropped to keep the stack easy to explain; good to walk through as a deliberate simplification.
