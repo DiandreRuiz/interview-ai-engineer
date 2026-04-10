@@ -1,0 +1,18 @@
+.git
+.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/*.pyc
+**/*.pyo
+
+# Artifacts are bind-mounted at runtime, not baked into the image.
+fda-regulations/artifacts/
+fda-regulations/dist/
+fda-regulations/reports/
+
+# Not needed for the build.
+context/
+.cursor/
+terminology-notes.md
