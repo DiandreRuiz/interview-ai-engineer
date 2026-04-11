@@ -5,8 +5,22 @@ from pathlib import Path
 
 from fda_regulations.config import Settings
 from fda_regulations.index.load import is_hybrid_index_manifest, load_hybrid_retriever
-from fda_regulations.search.protocol import Retriever
-from fda_regulations.search.stub import StubRetriever
+from fda_regulations.search.protocol import RetrievalHit, Retriever
+from fda_regulations.search.query import PreparedQuery
+
+
+class StubRetriever:
+    """No-op retriever for relaxed dev mode (no index artifacts required)."""
+
+    def search(
+        self,
+        query: PreparedQuery,
+        *,
+        top_k: int,
+    ) -> list[RetrievalHit]:
+        _ = (query, top_k)
+        return []
+
 
 _MANIFEST_NAME = "index_manifest.json"
 _EXPECTED_SCHEMA_VERSION = 1

@@ -5,7 +5,10 @@ from pathlib import Path
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from fda_regulations.site_urls import FDA_WARNING_LETTERS_LISTING_URL
+FDA_WARNING_LETTERS_LISTING_URL = (
+    "https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/"
+    "compliance-actions-and-activities/warning-letters"
+)
 
 
 class Settings(BaseSettings):

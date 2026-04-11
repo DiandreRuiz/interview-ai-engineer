@@ -1,6 +1,6 @@
 """Corpus → chunks via raw_letters_to_chunks."""
 
-from fda_regulations.chunk_pipeline import raw_letters_to_chunks
+from fda_regulations.chunking import raw_letters_to_chunks
 from fda_regulations.ingest.scrape.models import RawLetterDocument, utc_now
 
 

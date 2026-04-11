@@ -6,7 +6,7 @@ from collections import defaultdict
 import httpx
 import respx
 
-from fda_regulations.chunk_pipeline import raw_letters_to_chunks
+from fda_regulations.chunking import raw_letters_to_chunks
 from fda_regulations.config import Settings
 from fda_regulations.ingest.corpus import iter_corpus_letters, write_corpus_jsonl
 from fda_regulations.ingest.scrape import run_ingest

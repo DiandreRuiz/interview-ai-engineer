@@ -238,7 +238,7 @@ To stay explainable in ~5–7 minutes:
 - **`fda_regulations/ingest/corpus.py`** — **`write_corpus_jsonl`**, **`iter_corpus_letters`**, manifest types.
 - **`fda_regulations/chunking/`** — paragraph extraction (`article#main-content` **`<p>`**), CFR regex per chunk, **`ChunkRecord`**.
 - **`fda_regulations/index/`** — **`build_hybrid_index`**, **`load_hybrid_retriever`**, **`HybridRetriever`**, **`HybridIndexManifest`**, RRF helper.
-- **`fda_regulations/chunk_pipeline.py`** — **`raw_letters_to_chunks`** (corpus → **`ChunkRecord`** list).
+- **`fda_regulations/chunking/`** also exports **`raw_letters_to_chunks`** (corpus → **`ChunkRecord`** list).
 - **`fda_regulations/cli/`** — **`fda-scrape`** (`uv run fda-scrape`); **`fda-build-index`** (`uv run fda-build-index`) orchestrates corpus → chunks → index and optional **`--report`**.
 
 ### Configuration (env)
@@ -264,12 +264,12 @@ fda-regulations/
   reports/               # ingest previews (--preview-dir), optional phase-1 report output
   src/fda_regulations/
     app/                   # FastAPI: lifespan, GET /health, POST /search, Pydantic models
-    search/                # Retriever protocol, query prep, bootstrap → HybridRetriever
-    tokenize.py            # shared NFKC + casefold + tokens (query + BM25)
+    search/                # Retriever protocol, query prep, bootstrap (+ stub) → HybridRetriever
+    tokenize.py            # shared NFKC + casefold + tokens (query + BM25 token list)
+    config.py              # pydantic-settings + FDA listing URL constant
     ingest/                # scrape/ + corpus.py (JSONL); chunking consumes HTML
-    chunking/              # paragraphs + CFR + ChunkRecord
+    chunking/              # paragraphs + CFR + ChunkRecord + raw_letters_to_chunks
     index/                 # build_hybrid_index, load_hybrid_retriever, RRF
-    chunk_pipeline.py      # corpus → chunks
     cli/                   # ``fda-scrape``, ``fda-build-index``
   tests/
 ```

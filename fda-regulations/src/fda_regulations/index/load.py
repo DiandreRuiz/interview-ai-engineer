@@ -10,9 +10,9 @@ from rank_bm25 import BM25Okapi
 
 from fda_regulations.chunking.models import ChunkRecord
 from fda_regulations.config import Settings
-from fda_regulations.index.bm25_tokens import bm25_token_list
 from fda_regulations.index.manifest import read_hybrid_manifest
 from fda_regulations.index.retriever import HybridRetriever
+from fda_regulations.tokenize import bm25_token_list
 
 
 def _read_chunks_jsonl(path: Path) -> dict[str, ChunkRecord]:

@@ -12,7 +12,7 @@ from pathlib import Path
 
 from rich.panel import Panel
 
-from fda_regulations.chunk_pipeline import raw_letters_to_chunks
+from fda_regulations.chunking import raw_letters_to_chunks
 from fda_regulations.cli.ingest_rich_summary import (
     configure_rich_cli_logging,
     ingest_console_stdout,

@@ -10,7 +10,6 @@ import httpx
 
 from fda_regulations.config import Settings
 
-from .client import build_ingest_client
 from .datatables_listing import (
     build_datatables_query_params,
     datatables_ajax_request_url,
@@ -19,6 +18,13 @@ from .datatables_listing import (
 )
 from .models import IngestResult, LetterListEntry, RawLetterDocument, utc_now
 from .progress_reporting import scrape_progress_sink
+
+
+def build_ingest_client(settings: Settings) -> httpx.Client:
+    """HTTP client for FDA ingest (timeout, User-Agent, redirects)."""
+    timeout = httpx.Timeout(60.0, connect=15.0)
+    headers = {"User-Agent": settings.fda_user_agent}
+    return httpx.Client(timeout=timeout, headers=headers, follow_redirects=True)
 
 
 class ListingBatchProgress(TypedDict):

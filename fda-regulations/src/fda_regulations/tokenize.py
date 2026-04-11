@@ -23,3 +23,9 @@ def tokenize_for_retrieval(text: str) -> tuple[str, ...]:
     if not text.strip():
         return ()
     return tokenize_normalized(normalize_for_retrieval(text))
+
+
+def bm25_token_list(text: str) -> list[str]:
+    """Return token list for BM25; empty text maps to a placeholder token."""
+    tokens = list(tokenize_for_retrieval(text))
+    return tokens if tokens else ["__empty__"]
