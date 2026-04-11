@@ -21,6 +21,8 @@ WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
 COPY fda-regulations/src/ /app/src/
+# Host trees may be 0600; non-root appuser must read application code.
+RUN chown -R appuser:appuser /app/src
 
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONPATH=/app/src

@@ -63,7 +63,7 @@ That is a **hybrid RAG** story: sparse + dense retrieval, one fusion step, groun
 
 ## Docker (implemented)
 
-**`Dockerfile`** at the repo root — two-stage build: **builder** installs `uv` + production deps (`uv sync --locked --no-dev`); **runtime** copies `.venv` + `src/` into `python:3.13-slim-bookworm`, non-root user, `HEALTHCHECK` against `/health` (60 s start period for index load). **`docker-compose.yml`** bind-mounts **`fda-regulations/artifacts/`** read-only into the container at `/app/artifacts` so index artifacts are not baked into the image. **`.dockerignore`** excludes `.git`, `.venv`, artifacts, reports, and planning files from the build context.
+**`Dockerfile`** at the repo root — two-stage build: **builder** installs `uv` + production deps (`uv sync --locked --no-dev`); **runtime** copies `.venv` + `src/` into `python:3.13-slim-bookworm`, non-root user, `HEALTHCHECK` against `/health` (60 s start period for index load). After copying **`src/`**, **`RUN chown -R appuser:appuser /app/src`** so the app can run if the build context had **mode `0600`** files (otherwise **`PermissionError`** on import). **`docker-compose.yml`** bind-mounts **`fda-regulations/artifacts/`** read-only into the container at `/app/artifacts` so index artifacts are not baked into the image; the non-root user must be able to read the mount (e.g. **`chmod -R a+rX artifacts/`** on the host if index files are **`0600`**). **`.dockerignore`** excludes `.git`, `.venv`, artifacts, reports, and planning files from the build context.
 
 **Reviewer command:** `docker compose up --build` from the repo root (requires artifacts built on the host first via `fda-build-index`).
 
