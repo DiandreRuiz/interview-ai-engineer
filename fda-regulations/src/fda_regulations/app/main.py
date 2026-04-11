@@ -7,7 +7,7 @@ from fastapi import FastAPI
 
 from fda_regulations.app.routers import health, search
 from fda_regulations.config import Settings
-from fda_regulations.search.bootstrap import load_retriever
+from fda_regulations.search.retriever_factory import load_retriever
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:

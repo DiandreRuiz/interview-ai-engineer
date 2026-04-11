@@ -1,1 +1,1 @@
-"""Query-time retrieval (see ``protocol``, ``query``, ``bootstrap``, ``stub``)."""
+"""Query-time retrieval (see ``protocol``, ``query``, ``retriever_factory``)."""

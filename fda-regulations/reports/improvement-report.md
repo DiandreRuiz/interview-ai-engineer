@@ -209,7 +209,7 @@ The codebase is **appropriately sized** for a 4-hour takehome. 30 modules, ~1,20
 
 ### Extendability
 
-- **New retriever backend**: implement the `Retriever` protocol, register in `bootstrap.py`. No route changes.
+- **New retriever backend**: implement the `Retriever` protocol, register in `retriever_factory.py`. No route changes.
 - **New chunk strategy**: modify `chunking/` and rebuild the index. API and tests unchanged.
 - **Add CFR to search results**: add `cfr_citations` field to `SearchHit` and `RetrievalHit`, map from `ChunkRecord`.
 - **Add taxonomy**: `ChunkRecord` already has room for optional label fields.

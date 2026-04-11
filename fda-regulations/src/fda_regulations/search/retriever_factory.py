@@ -1,4 +1,4 @@
-"""Construct a retriever from settings and on-disk artifact layout."""
+"""Factory for constructing a retriever from settings and on-disk artifact layout."""
 
 import json
 from pathlib import Path
@@ -18,6 +18,7 @@ class StubRetriever:
         *,
         top_k: int,
     ) -> list[RetrievalHit]:
+        # for unused arg linting
         _ = (query, top_k)
         return []
 
