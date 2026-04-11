@@ -7,9 +7,13 @@ description: Runs sentence-transformers locally on CPU or Apple Silicon for dens
 
 **Canonical documentation**
 
-- [Sentence-Transformers usage](https://sbert.net/docs/sentence_transformer/usage/usage.html)
-- [Semantic search examples](https://sbert.net/docs/sentence_transformer/usage/semantic_textual_similarity.html) (patterns for encode + similarity)
+- [Sentence-Transformers usage](https://sbert.net/docs/sentence_transformer/usage/usage.html) (loading, `encode`, multimodal notes)
+- [Semantic textual similarity](https://sbert.net/docs/sentence_transformer/usage/semantic_textual_similarity.html) (`encode` + `model.similarity` / `similarity_fn_name`)
+- [`SentenceTransformer.encode` API](https://sbert.net/docs/package_reference/sentence_transformer/model.html#sentence_transformers.sentence_transformer.model.SentenceTransformer.encode)
+- [Hugging Face `sentence-transformers` models](https://huggingface.co/sentence-transformers) (model IDs)
 - **PyTorch MPS** (optional Apple GPU): [PyTorch MPS backend](https://pytorch.org/docs/stable/notes/mps.html)
+
+**fda-regulations pins** (see `pyproject.toml`): **sentence-transformers ≥5.4**, **torch ≥2.11** (CPU wheels via `tool.uv` index in this repo).
 
 The assignment discourages **pay-per-token** APIs; use **local** embedding models on **CPU** (or **MPS** on Apple Silicon if you explicitly enable it and test).
 
@@ -38,11 +42,12 @@ embeddings = model.encode(
 ```
 
 - Tune **`batch_size`** for RAM; large batches help throughput until memory-bound.
-- **`normalize_embeddings=True`** simplifies cosine similarity to **dot product** against normalized vectors.
+- **`normalize_embeddings=True`** keeps vectors unit-length so **dot product** matches **cosine**; if the loaded model already ends with a **Normalize** module, prefer the library’s **`SimilarityFunction.DOT_PRODUCT`** when using **`model.similarity`** (see [STS docs](https://sbert.net/docs/sentence_transformer/usage/semantic_textual_similarity.html)) to avoid double normalization overhead.
+- For **retrieval-oriented** models with separate query vs document prompts, use **`encode_query` / `encode_document`** when available; for symmetric bi-encoders (e.g. **MiniLM**), they behave like **`encode()`** ([usage](https://sbert.net/docs/sentence_transformer/usage/usage.html)).
 
 ## NumPy and copies
 
-- `encode` often returns **NumPy** `ndarray`; when bridging to BM25 or pure Python structures, convert intentionally (`tolist()` only when needed). Keep **float32** consistently to save memory.
+- `encode` typically returns **NumPy** `ndarray` (or set **`convert_to_numpy=True`** explicitly if you rely on NumPy downstream); when bridging to BM25 or pure Python structures, convert intentionally (`tolist()` only when needed). Keep **float32** consistently to save memory.
 
 ## Caching embeddings
 

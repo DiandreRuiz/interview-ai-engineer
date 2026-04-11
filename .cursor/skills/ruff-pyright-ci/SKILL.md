@@ -9,7 +9,7 @@ description: Configures Ruff linter and formatter plus Pyright type checking in 
 
 - [Ruff](https://docs.astral.sh/ruff/) — linter + formatter (shares tooling lineage with uv)
 - [Ruff rules](https://docs.astral.sh/ruff/rules/)
-- [Ruff CLI](https://docs.astral.sh/ruff/configuration/)
+- [Ruff configuration](https://docs.astral.sh/ruff/configuration/) (CLI flags mirror **`ruff check`** / **`ruff format`** subcommands)
 - [Pyright configuration](https://github.com/microsoft/pyright/blob/main/docs/configuration.md)
 
 The employer README calls out **effective use of type hints** and **`uv`**. Ruff + Pyright are the default quality gates ([python-best-practices](../python-best-practices/SKILL.md)).

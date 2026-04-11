@@ -10,6 +10,10 @@ description: Uses HTTPX for sync and async HTTP to FDA sites and APIs—AsyncCli
 - [HTTPX](https://www.python-httpx.org/)
 - [Quickstart](https://www.python-httpx.org/quickstart/)
 - [Async support](https://www.python-httpx.org/async/)
+- [API / developer interface](https://www.python-httpx.org/api/)
+- [Compatibility with Requests](https://www.python-httpx.org/compatibility/) (helpful when porting call sites)
+
+**fda-regulations pins** (see `pyproject.toml`): **HTTPX ≥0.28** (check [release notes](https://github.com/encode/httpx/blob/master/CHANGELOG.md) when upgrading across minors).
 
 HTTPX supports **sync and async** APIs, HTTP/1.1 and HTTP/2, and is **fully type-annotated**. Prefer it over `requests` for new code in this repo when async fits the call site.
 

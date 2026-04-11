@@ -7,8 +7,8 @@ description: Parses FDA warning letter HTML with Beautiful Soup and lxml for par
 
 **Canonical documentation**
 
-- [Beautiful Soup 4](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)
-- [lxml](https://lxml.de/) (parser backend; fast for large HTML)
+- [Beautiful Soup 4](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) — package **`beautifulsoup4`** on [PyPI](https://pypi.org/project/beautifulsoup4/)
+- [lxml](https://lxml.de/) (parser backend; fast for large HTML) — this repo pins **`lxml` ≥5.3** per `pyproject.toml`
 
 The [implementation-plan.md](../../../context/plans/implementation-plan.md) uses **paragraph-level (contextual) chunking**: one chunk is roughly one **HTML paragraph** or logical block in the letter body, which supports **citations** back to letter + paragraph identity.
 

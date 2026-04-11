@@ -7,8 +7,8 @@ description: Implements sparse retrieval with Okapi BM25, combines ranked lists 
 
 **References**
 
-- Python **`rank-bm25`**: [PyPI rank-bm25](https://pypi.org/project/rank-bm25/), [GitHub dorianbrown/rank_bm25](https://github.com/dorianbrown/rank_bm25)
-- **RRF formula and default `k`**: [Elasticsearch: Reciprocal rank fusion](https://www.elastic.co/guide/en/elasticsearch/reference/current/rrf.html) (also summarized at [Elastic reciprocal rank fusion docs](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/reciprocal-rank-fusion))
+- Python **`rank-bm25`** (this repo: **`rank-bm25` ≥0.2.2** per `pyproject.toml`): [PyPI](https://pypi.org/project/rank-bm25/), [GitHub dorianbrown/rank_bm25](https://github.com/dorianbrown/rank_bm25)
+- **RRF** (formula, **`rank_constant` default 60** in Elasticsearch): [Reciprocal rank fusion](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/reciprocal-rank-fusion) (legacy guide path: [RRF in the Elasticsearch Reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/rrf.html)); original paper: [Cormack et al., SIGIR 2009](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)
 - Project constants: [implementation-plan.md](../../../context/plans/implementation-plan.md) appendix
 
 ## Why hybrid
@@ -28,8 +28,10 @@ from rank_bm25 import BM25Okapi
 tokenized_corpus: list[list[str]] = [...]
 bm25 = BM25Okapi(tokenized_corpus)
 scores = bm25.get_scores(tokenized_query)
+# Optional: score only a subset of doc indices — get_batch_scores(query, doc_ids)
 ```
 
+- **`get_scores`** returns a **NumPy** vector over the whole corpus; use **`get_batch_scores`** when scoring a candidate subset only.
 - **`rank_bm25`** depends on **NumPy**: be mindful of **array dtypes** and avoid unnecessary copies when bridging to other libraries; keep chunk text as Python `str` at boundaries.
 
 ## Reciprocal Rank Fusion (RRF)
@@ -40,8 +42,8 @@ For each document `d` appearing in retriever lists `r`, Elasticsearch defines th
 \text{RRF}(d) = \sum_{r} \frac{1}{k + \text{rank}_r(d)}
 \]
 
-- Documents **missing** from a retriever’s top‑`k` list contribute **0** for that retriever (omit that term).
-- Use **`k ≈ 60`** per common defaults (Elasticsearch RRF default **`rank_constant`** is **60**). Match the value documented in code and in [implementation-plan.md](../../../context/plans/implementation-plan.md).
+- Documents **missing** from a retriever’s **truncated candidate list** (your per-retriever top‑N) contribute **0** for that retriever (omit that term).
+- The fusion hyperparameter **`k`** (Elasticsearch **`rank_constant`**) defaults to **60** in Elastic’s RRF API; **`k ≥ 1`**. Match the value in code and [implementation-plan.md](../../../context/plans/implementation-plan.md).
 
 ```python
 def reciprocal_rank_fusion(

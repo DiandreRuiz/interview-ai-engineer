@@ -8,6 +8,7 @@ description: Adds structured application logging for search queries, latency, an
 **References**
 
 - [logging — Logging facility](https://docs.python.org/3/library/logging.html)
+- [Logging cookbook](https://docs.python.org/3/howto/logging-cookbook.html) (formatters, handlers, context)
 - [structlog](https://www.structlog.org/) (optional third-party structured logs)
 - Project preference: [implementation-plan.md](../../../context/plans/implementation-plan.md) (structured logs before optional Langfuse)
 

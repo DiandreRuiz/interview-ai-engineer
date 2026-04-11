@@ -7,9 +7,11 @@ description: Tests fda-regulations with pytest using fixtures, RESPX or pytest-h
 
 **Canonical documentation**
 
-- [pytest](https://docs.pytest.org/)
-- [RESPX](https://lundberg.github.io/respx/) — mocks **`httpx`** (sync and async) with a pytest-friendly API
+- [pytest](https://docs.pytest.org/) — [fixtures how-to](https://docs.pytest.org/en/stable/how-to/fixtures.html)
+- [RESPX](https://lundberg.github.io/respx/) — [user guide](https://lundberg.github.io/respx/guide/) (mocks **HTTPX** ≥0.25; this repo uses **HTTPX ≥0.28**)
 - [pytest-httpx](https://colin-b.github.io/pytest_httpx/) — alternative **`httpx`** mock fixture
+- [FastAPI testing](https://fastapi.tiangolo.com/tutorial/testing/) (`TestClient`); [async tests](https://fastapi.tiangolo.com/advanced/async-tests/) when the suite uses **`async def`** tests
+- [Starlette `TestClient`](https://www.starlette.dev/testclient/) — use **`with TestClient(app) as client:`** so **lifespan** runs ([running lifespan in tests](https://www.starlette.dev/lifespan/#running-lifespan-in-tests))
 
 **Default recommendation for this repo:** **`RESPX`** when tests already use **HTTPX** ([httpx-http-client](../httpx-http-client/SKILL.md)), because it mirrors HTTPX patterns closely. **`pytest-httpx`** is equally valid; pick one per project and stay consistent.
 
@@ -36,7 +38,7 @@ async def test_fetch_letter(respx_mock: respx.MockRouter) -> None:
     assert r.status_code == 200
 ```
 
-Register the ASGI app with **`httpx.ASGITransport`** or **`TestClient`** from Starlette/FastAPI for in-process API tests ([FastAPI testing](https://fastapi.tiangolo.com/tutorial/testing/)).
+Register the ASGI app with **`httpx.ASGITransport`** or **`TestClient`** from Starlette/FastAPI for in-process API tests.
 
 ## Fixtures layout
 

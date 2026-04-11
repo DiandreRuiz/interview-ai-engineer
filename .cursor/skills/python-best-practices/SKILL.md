@@ -7,7 +7,7 @@ description: Applies maintainable Python patterns for typed application code, pa
 
 ## Defaults for this codebase
 
-- **Python 3.13**; manage env and deps with **`uv`** (`pyproject.toml`, committed lockfile).
+- **Python 3.13**; manage env and deps with **`uv`** (`pyproject.toml`, committed lockfile). Style: [PEP 8](https://peps.python.org/pep-0008/) as baseline.
 - **Narrow types** at boundaries: Pydantic models or `TypedDict` / `Literal` for JSON and enums; avoid untyped `dict` and `Any` where a shape is known.
 - **Lint/format/typecheck:** `ruff` + **`pyright`** (or equivalent) in CI; fix what they report for new code.
 - **Tests:** `pytest`, fixtures for I/O and external services; no live network in default CI runs.

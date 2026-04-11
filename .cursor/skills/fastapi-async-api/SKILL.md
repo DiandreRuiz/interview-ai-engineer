@@ -9,7 +9,12 @@ description: Builds async FastAPI services with dependency injection, lifespan h
 
 - [FastAPI tutorial](https://fastapi.tiangolo.com/tutorial/)
 - [FastAPI reference](https://fastapi.tiangolo.com/reference/)
-- [Lifespan events](https://fastapi.tiangolo.com/advanced/events/) (startup/shutdown)
+- [Lifespan events](https://fastapi.tiangolo.com/advanced/events/) (recommended; `@app.on_event("startup")` / `"shutdown"` are legacy)
+- [Dependencies](https://fastapi.tiangolo.com/tutorial/dependencies/) (`Depends`, shared clients)
+- [Handling errors](https://fastapi.tiangolo.com/tutorial/handling-errors/) (`HTTPException`)
+- [Starlette lifespan](https://www.starlette.dev/lifespan/) (underlying ASGI behavior)
+
+**fda-regulations pins** (see `pyproject.toml`): **FastAPI ≥0.115**, **Uvicorn ≥0.32**, **Python 3.13**.
 
 This project’s **`POST /search`** returns ranked chunks with **citations** (`letter_url`, `chunk_id`, `paragraph_index`, `snippet`). Keep handlers **thin**: validate input, call the retriever (often via **`asyncio.to_thread`** for sync BM25/embeddings work), map to response models.
 
@@ -46,7 +51,7 @@ Avoid heavy work per request.
 ## Async vs sync
 
 - **Async route handlers** for I/O-bound work (`await` HTTPX, async file I/O if used).
-- If a library is **CPU-bound and sync** (some embedding calls), run in **`asyncio.to_thread()`** or a small process pool to avoid blocking the event loop—document the choice.
+- If a library is **CPU-bound and sync** (some embedding calls), run in **`asyncio.to_thread()`** ([stdlib](https://docs.python.org/3/library/asyncio-task.html#asyncio.to_thread)) or a small process pool to avoid blocking the event loop—document the choice.
 
 ## Errors
 

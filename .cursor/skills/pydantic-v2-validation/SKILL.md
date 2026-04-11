@@ -8,9 +8,12 @@ description: Defines Pydantic v2 models and settings for API boundaries, chunk r
 **Canonical documentation**
 
 - [Models](https://docs.pydantic.dev/latest/concepts/models/)
-- [Configuration (`ConfigDict`)](https://docs.pydantic.dev/latest/api/config/)
+- [Model configuration](https://docs.pydantic.dev/latest/concepts/config/) (`model_config`, `ConfigDict`)
+- [`ConfigDict` API reference](https://docs.pydantic.dev/latest/api/config/)
 - [Types and validation](https://docs.pydantic.dev/latest/concepts/types/)
 - [Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) (`pydantic-settings` package)
+
+**fda-regulations pins** (see `pyproject.toml`): **pydantic ≥2.10**, **pydantic-settings ≥2.6**.
 
 The employer README expects **narrow types** and avoiding raw **`dict` / `Any`** where a shape is known. Use **Pydantic v2** (`BaseModel`) for HTTP request/response bodies and persisted chunk records loaded into memory.
 

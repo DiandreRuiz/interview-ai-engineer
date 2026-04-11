@@ -11,7 +11,7 @@ description: Bounded weak supervision for chunk taxonomy (CFR rules + keyword ov
 
 - Project rules: [implementation-plan.md](../../../context/plans/implementation-plan.md) (deferred taxonomy / interview story)
 - **TOML (read-only):** [tomllib](https://docs.python.org/3/library/tomllib.html) (Python 3.13 stdlib)
-- **YAML (optional):** [PyYAML](https://pyyaml.org/wiki/PyYAMLDocumentation)
+- **YAML (optional):** [PyYAML documentation](https://pyyaml.org/wiki/PyYAMLDocumentation), [PyPI `PyYAML`](https://pypi.org/project/PyYAML/)
 - **TF-IDF (optional path):** [sklearn.feature_extraction.text.TfidfVectorizer](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
 
 **Weak supervision** here means **explicit rules + a fixed vocabulary**, not training a classifier or using LLM labels (out of scope for the PoC per the implementation plan).

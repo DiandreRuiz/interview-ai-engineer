@@ -7,7 +7,7 @@ description: Navigates FDA Data Dashboard API (OII auth), FDA Warning Letters as
 
 **Primary links (verify before shipping; FDA pages can change)**
 
-- [FDA Data Dashboard API](https://datadashboard.fda.gov/oii/api/index.htm)
+- [FDA Data Dashboard API usage](https://datadashboard.fda.gov/oii/api/index.htm) (OII auth, request/response formats, paging)
 - [OII Unified Logon](https://www.accessdata.fda.gov/scripts/oul/index.cfm?action=portal.login) (account required for Dashboard API)
 - [FDA Warning Letters (compliance actions)](https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/compliance-actions-and-activities/warning-letters)
 
