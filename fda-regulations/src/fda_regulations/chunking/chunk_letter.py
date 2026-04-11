@@ -1,4 +1,8 @@
-"""Build paragraph chunks from a raw scraped letter."""
+"""Build paragraph chunks from a raw scraped letter.
+
+For an iterable of letters, use ``raw_letters_to_chunks`` in ``fda_regulations.chunking``
+(package ``__init__``), which calls ``chunk_raw_letter`` per document.
+"""
 
 from __future__ import annotations
 
