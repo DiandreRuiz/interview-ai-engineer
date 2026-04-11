@@ -15,7 +15,7 @@ description: Configures GitHub Actions for Python projects using astral-sh setup
 
 1. **`actions/checkout`** (pin to a major version the repo trusts, e.g. `v4` or newer per org policy).
 2. **`astral-sh/setup-uv`** with a **pinned `uv` version** for reproducibility (`version: "…"` in `with:`).
-3. **`uv sync --locked`** from the **`fda-regulations/`** project root (per uv’s GitHub guide). **pytest** uses **`pythonpath = ["src"]`** in **`pyproject.toml`** so checks do not require a local **`.env`**; developers copy **`.env.example` → `.env`** for **`uv run`** (uv loads **`.env`**; includes **`PYTHONPATH=src`** for macOS **`.pth`** edge cases). Dev tools live in **main** `dependencies`.
+3. **`uv sync --locked`** from the **`fda-regulations/`** project root ([uv + GitHub Actions](https://docs.astral.sh/uv/guides/integration/github/), [`uv sync` reference](https://docs.astral.sh/uv/reference/cli/#uv-sync)). **pytest** uses **`pythonpath = ["src"]`** in **`pyproject.toml`** so checks do not require a local **`.env`**; developers copy **`.env.example` → `.env`** for **`uv run`** (uv loads **`.env`**; includes **`PYTHONPATH=src`** for macOS **`.pth`** edge cases). Dev tools live in **main** `dependencies`.
 4. Run checks with **`uv run`**.
 
 Example skeleton (adjust paths and Python pin to match `pyproject.toml`):

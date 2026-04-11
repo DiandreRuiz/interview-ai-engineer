@@ -7,7 +7,7 @@ description: Builds and runs Python 3.13 services on macOS with Docker Desktop�
 
 **Official references**
 
-- [Dockerfile best practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
+- [Dockerfile / image best practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/) (see also [multi-stage builds](https://docs.docker.com/build/building/multi-stage/))
 - [Docker language guide: Python](https://docs.docker.com/language/python/)
 - [Uvicorn settings](https://www.uvicorn.org/settings/) (ASGI server for FastAPI)
 
@@ -32,10 +32,10 @@ This repo’s assignment expects the solution to **build and run on macOS with D
 
 The `fda-regulations` project uses **uv**. Typical patterns:
 
-- **Multi-stage:** stage 1 installs uv + deps (`uv sync --frozen` or `uv sync --locked` per [uv docs](https://docs.astral.sh/uv/)); stage 2 copies `.venv` or wheel installs into a slim runtime. Alternatively copy the project and run `uv sync` in one stage if simplicity beats image size for a PoC.
-- From the **repository root**, document commands that set the project directory, e.g. `uv --directory fda-regulations sync`, matching [uv-packaging](../uv-packaging/SKILL.md).
+- **Multi-stage:** stage 1 installs uv + deps with **`uv sync --locked`** (same as CI—fails if the lockfile is stale); stage 2 copies `.venv` into a slim runtime or copies wheels. One-stage **`uv sync`** without `--locked` is fine for local experiments but can rewrite `uv.lock` inside the build.
+- From the **repository root**, document **`uv --directory fda-regulations sync --locked`**, matching [uv-packaging](../uv-packaging/SKILL.md).
 
-Verify the exact **`uv sync`** flags in the [uv CLI reference](https://docs.astral.sh/uv/reference/cli/); Astral’s GitHub Actions guide uses **`uv sync --locked`** for reproducible installs.
+See [`uv sync`](https://docs.astral.sh/uv/reference/cli/#uv-sync) for **`--locked`** vs **`--frozen`**.
 
 ## .dockerignore
 

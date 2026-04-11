@@ -22,7 +22,7 @@ uv is Astral’s Python package and project manager (Rust); it replaces much of 
 |--------|---------|
 | **`uv sync`** | Create/update `.venv` and install exactly what the **lockfile** resolves (reproducible). Prefer this after clone or when `uv.lock` changes. |
 | **`uv lock`** | Resolve dependencies and **write/update `uv.lock`** (run after changing deps in `pyproject.toml` or when bumping versions intentionally). |
-| **`uv add <pkg>`** | Add a runtime dependency; updates `pyproject.toml` and lockfile. Use **`uv add --dev <pkg>`** (or group flags per docs) for dev/test tools. |
+| **`uv add <pkg>`** | Add a runtime dependency; updates `pyproject.toml` and lockfile. For dev tools, use **`uv add --dev <pkg>`** (development group) or **`uv add --group <name> <pkg>`** for a named `[dependency-groups]` table (see [dependency groups](https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups)). |
 | **`uv remove <pkg>`** | Remove dependency; refresh lockfile. |
 | **`uv run <cmd>`** | Run a command inside the project environment (uv ensures sync as needed). Example: `uv run pytest`, `uv run python -m mypkg`. |
 | **`uv init`** | Scaffold a new project (not needed if `pyproject.toml` already exists). |
@@ -31,7 +31,9 @@ uv is Astral’s Python package and project manager (Rust); it replaces much of 
 
 - **Commit `uv.lock`** for applications and takehomes so installs are reproducible.
 - For **fda-regulations**, document: `cd fda-regulations && uv sync` (see “This repo” below).
-- In **CI**, use `uv sync --frozen` (or current recommended frozen flag from docs) so lockfile mismatches fail fast.
+- In **CI** and reproducible image builds, prefer **`uv sync --locked`**: uv refuses to run if `uv.lock` is missing or **out of date** relative to `pyproject.toml` (see [`uv sync` CLI](https://docs.astral.sh/uv/reference/cli/#uv-sync)). Use **`uv sync --frozen`** when you want to install from the existing lockfile **without** asserting it matches `pyproject.toml` (weaker guard against forgotten `uv lock`).
+
+**This repo’s CI** (`.github/workflows/ci.yml`) uses **`uv sync --locked`** after **`astral-sh/setup-uv`**.
 
 ## This repo: `fda-regulations/` as the uv project root
 

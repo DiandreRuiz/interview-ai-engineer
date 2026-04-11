@@ -9,6 +9,7 @@ description: Configures Ruff linter and formatter plus Pyright type checking in 
 
 - [Ruff](https://docs.astral.sh/ruff/) — linter + formatter (shares tooling lineage with uv)
 - [Ruff rules](https://docs.astral.sh/ruff/rules/)
+- [Ruff CLI](https://docs.astral.sh/ruff/configuration/)
 - [Pyright configuration](https://github.com/microsoft/pyright/blob/main/docs/configuration.md)
 
 The employer README calls out **effective use of type hints** and **`uv`**. Ruff + Pyright are the default quality gates ([python-best-practices](../python-best-practices/SKILL.md)).
@@ -42,7 +43,7 @@ Prefer **`[tool.pyright]`** in **`fda-regulations/pyproject.toml`** when you wan
 include = ["src"]
 exclude = ["**/__pycache__", ".venv"]
 pythonVersion = "3.13"
-typeCheckingMode = "basic" # or "standard" / "strict" as the project matures
+typeCheckingMode = "standard" # fda-regulations uses standard; tighten to "strict" only if the team wants
 ```
 
 - **`pyrightconfig.json`** in the same directory **overrides** `pyproject` if both exist—pick one source of truth.
