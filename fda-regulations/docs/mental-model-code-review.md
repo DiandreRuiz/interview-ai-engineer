@@ -11,7 +11,7 @@ flowchart LR
   subgraph batch [Batch_CLI]
     scrape[ingest_scrape]
     corpus[ingest_corpus]
-    chunk[chunking_chunk_pipeline]
+    chunk[chunking_raw_letters_to_chunks]
     build[index_build]
     scrape --> corpus
     corpus --> chunk
@@ -29,18 +29,18 @@ flowchart LR
   build --> manifest
   subgraph api [FastAPI_runtime]
     life[app_lifespan]
-    boot[search_bootstrap]
+    rfact[search_retriever_factory]
     prep[search_query_tokenize]
     ret[index_retriever_RRF]
     route[routers_search]
-    life --> boot
-    boot --> ret
+    life --> rfact
+    rfact --> ret
     route --> prep
     prep --> ret
   end
-  manifest --> boot
-  chunks --> boot
-  emb --> boot
+  manifest --> rfact
+  chunks --> rfact
+  emb --> rfact
 ```
 
 ---
@@ -57,7 +57,7 @@ flowchart LR
 
 ---
 
-## Layer 2: Processing / chunking (`chunking/`, `chunk_pipeline.py`)
+## Layer 2: Processing / chunking (`chunking/`)
 
 | Piece | Role |
 |--------|------|
@@ -65,7 +65,7 @@ flowchart LR
 | [`chunking/cfr.py`](../src/fda_regulations/chunking/cfr.py) | **Regex** CFR-shaped strings **per chunk** → stored on `ChunkRecord.cfr_citations` (**metadata for citations/reporting**; **not** used in retrieval today). |
 | [`chunking/chunk_letter.py`](../src/fda_regulations/chunking/chunk_letter.py) | **`chunk_id = letter_id:paragraph_index`**; attaches letter URL, dates, company. |
 | [`chunking/models.py`](../src/fda_regulations/chunking/models.py) | **`ChunkRecord`** Pydantic model (narrow types at boundaries). |
-| [`chunk_pipeline.py`](../src/fda_regulations/chunk_pipeline.py) | **`raw_letters_to_chunks`**: iterable of `RawLetterDocument` → **list of `ChunkRecord`**. |
+| [`chunking/__init__.py`](../src/fda_regulations/chunking/__init__.py) | **`raw_letters_to_chunks`**: iterable of `RawLetterDocument` → **list of `ChunkRecord`** (plus re-exports of `ChunkRecord`, `chunk_raw_letter`). |
 
 **Interview line:** Chunking matches **how FDA writes violations**; CFR strings are **cheap structure** without entity linking or taxonomy.
 
@@ -83,7 +83,7 @@ flowchart LR
 **Load time** — [`index/load.py`](../src/fda_regulations/index/load.py) `load_hybrid_retriever`:
 
 1. Reads manifest + chunks + order + numpy embeddings; validates consistency.
-2. Rebuilds **BM25Okapi** from **token lists** built by [`index/bm25_tokens.py`](../src/fda_regulations/index/bm25_tokens.py) — **same token rules** as query path.
+2. Rebuilds **BM25Okapi** from **token lists** built by [`tokenize.py`](../src/fda_regulations/tokenize.py) **`bm25_token_list`** — **same token rules** as query path.
 
 **Important detail:** BM25 is **not** serialized to disk; it is **reconstructed at startup** from chunk text (deterministic, keeps artifact set smaller).
 
@@ -100,7 +100,7 @@ flowchart LR
 | Piece | Role |
 |--------|------|
 | [`app/main.py`](../src/fda_regulations/app/main.py) | **Lifespan** calls **`load_retriever(settings)`** once; attaches `app.state.retriever`. |
-| [`search/bootstrap.py`](../src/fda_regulations/search/bootstrap.py) | If `require_artifacts`: validate **`index_manifest.json`** → **`load_hybrid_retriever`**; else **`StubRetriever`**. |
+| [`search/retriever_factory.py`](../src/fda_regulations/search/retriever_factory.py) | If `require_artifacts`: validate **`index_manifest.json`** → **`load_hybrid_retriever`**; else **`StubRetriever`**. |
 | [`search/protocol.py`](../src/fda_regulations/search/protocol.py) | **`Retriever`** protocol + **`RetrievalHit`** (internal DTO). |
 | [`search/query.py`](../src/fda_regulations/search/query.py) | **`prepare_search_query`** → **`PreparedQuery`** (`text` for dense, `tokens` for BM25). |
 | [`app/routers/search.py`](../src/fda_regulations/app/routers/search.py) | **`POST /search`**: prepare query → **`asyncio.to_thread(retriever.search, …)`** (CPU-heavy work off event loop) → map to Pydantic **`SearchResponse`** (snippet + **letter_id, letter_url, paragraph_index**). |
@@ -137,7 +137,7 @@ flowchart LR
 |----------|-----------|
 | “How we get letters” | `ingest/scrape` + DataTables listing |
 | “How we avoid re-scraping” | `ingest/corpus` JSONL |
-| “How we chunk” | `chunking/*` + `chunk_pipeline` |
+| “How we chunk” | `chunking/*`; batch helper **`raw_letters_to_chunks`** lives on **`fda_regulations.chunking`** |
 | “Where embeddings happen” | `index/build` (batch encode all chunks) |
 | “Where BM25 lives” | Built in `index/load` at API startup from `chunks.jsonl` |
 | “How hybrid merge works” | `index/retriever` + `index/rrf` |

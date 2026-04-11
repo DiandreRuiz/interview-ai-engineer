@@ -229,9 +229,9 @@ To stop: `docker compose down`.
 |------|------------------|
 | Scrape | `fda_regulations.ingest.scrape` (`run_ingest`, `run_ingest_new_letters`, …) |
 | Corpus I/O | `fda_regulations.ingest.corpus` |
-| Chunking | `fda_regulations.chunking` |
+| Chunking | `fda_regulations.chunking` (`chunk_raw_letter`, `ChunkRecord`, …) |
 | Index build / load | `fda_regulations.index` |
-| End-to-end letters → chunks | `fda_regulations.chunk_pipeline` |
+| Corpus → all chunk records | **`raw_letters_to_chunks`** (defined in **`fda_regulations.chunking`**, not a separate module) |
 | Phase-1 markdown report | `fda_regulations.reporting.write_phase1_ingest_report` |
 
 ---
