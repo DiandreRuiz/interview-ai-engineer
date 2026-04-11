@@ -3,9 +3,9 @@
 import asyncio
 import logging
 import time
-from typing import cast
+from typing import Annotated, cast
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from fda_regulations.app.models import SearchHit, SearchRequest, SearchResponse
 from fda_regulations.search.protocol import RetrievalHit, Retriever
@@ -13,6 +13,14 @@ from fda_regulations.search.query import prepare_search_query
 
 router = APIRouter(tags=["search"])
 log = logging.getLogger(__name__)
+
+
+def get_retriever(request: Request) -> Retriever:
+    """Retriever bound at app startup (``create_app`` lifespan); cast bridges untyped app.state."""
+    return cast(Retriever, request.app.state.retriever)
+
+
+RetrieverDep = Annotated[Retriever, Depends(get_retriever)]
 
 
 def _to_search_hit(hit: RetrievalHit) -> SearchHit:
@@ -28,8 +36,7 @@ def _to_search_hit(hit: RetrievalHit) -> SearchHit:
 
 
 @router.post("/search", response_model=SearchResponse)
-async def search(request: Request, body: SearchRequest) -> SearchResponse:
-    r = cast(Retriever, request.app.state.retriever)
+async def search(body: SearchRequest, retriever: RetrieverDep) -> SearchResponse:
     try:
         prepared = prepare_search_query(body.query)
     except ValueError as exc:
@@ -40,7 +47,7 @@ async def search(request: Request, body: SearchRequest) -> SearchResponse:
 
     t0 = time.perf_counter()
     raw_hits = await asyncio.to_thread(
-        r.search,
+        retriever.search,
         prepared,
         top_k=body.top_k,
     )
