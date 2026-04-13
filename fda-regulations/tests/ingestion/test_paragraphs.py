@@ -5,16 +5,14 @@ and the heading-merge pass (short ``<p>`` elements prepended to the next
 substantive paragraph).
 """
 
-import pytest
-
 from fda_regulations.chunking.paragraphs import (
     HEADING_MERGE_THRESHOLD,
     _merge_short_paragraphs,
     extract_paragraph_texts,
 )
 
-
 # -- Basic extraction --------------------------------------------------------
+
 
 def test_extract_from_article_main_content() -> None:
     long_a = "A" * HEADING_MERGE_THRESHOLD
@@ -84,6 +82,7 @@ def test_extract_returns_empty_when_no_main_region() -> None:
 
 # -- Heading-merge via _merge_short_paragraphs --------------------------------
 
+
 class TestMergeShortParagraphs:
     """Direct tests of the merge helper, independent of HTML parsing."""
 
@@ -92,13 +91,19 @@ class TestMergeShortParagraphs:
         assert _merge_short_paragraphs(paras, 50) == paras
 
     def test_single_heading_merged_into_next(self) -> None:
-        result = _merge_short_paragraphs(["HEADING", "Body text that is long enough to exceed the threshold."], 50)
+        result = _merge_short_paragraphs(
+            ["HEADING", "Body text that is long enough to exceed the threshold."], 50
+        )
         assert len(result) == 1
         assert result[0] == "HEADING\nBody text that is long enough to exceed the threshold."
 
     def test_consecutive_headings_all_merged(self) -> None:
         result = _merge_short_paragraphs(
-            ["WARNING LETTER", "CGMP Violations", "Body text that is definitely long enough to exceed the threshold easily."],
+            [
+                "WARNING LETTER",
+                "CGMP Violations",
+                "Body text that is definitely long enough to exceed the threshold easily.",
+            ],
             50,
         )
         assert len(result) == 1
@@ -106,7 +111,10 @@ class TestMergeShortParagraphs:
 
     def test_trailing_short_paragraph_emitted_as_is(self) -> None:
         result = _merge_short_paragraphs(
-            ["Body text that is definitely long enough to exceed the threshold easily.", "Sincerely,"],
+            [
+                "Body text that is definitely long enough to exceed the threshold easily.",
+                "Sincerely,",
+            ],
             50,
         )
         assert len(result) == 2
@@ -136,6 +144,7 @@ class TestMergeShortParagraphs:
 
 
 # -- Heading-merge via full HTML pipeline ------------------------------------
+
 
 def test_heading_merge_in_html_pipeline() -> None:
     """A short heading <p> followed by a long <p> produces one merged chunk."""
