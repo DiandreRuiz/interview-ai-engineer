@@ -43,7 +43,7 @@ That is a **hybrid RAG** story: sparse + dense retrieval, one fusion step, groun
 | Piece | Role | Why it stays simple |
 |-------|------|---------------------|
 | **Warning letters** | Main unstructured source | Rich text; no OII dependency to start |
-| **Contextual chunking** | One chunk ≈ one **HTML paragraph** (or logical block) in the letter body | Matches how FDA writes violations; good for citations and “why this chunk” |
+| **Contextual chunking (heading-merge)** | One chunk ≈ one **HTML paragraph** (or logical block) in the letter body | Matches how FDA writes violations; good for citations and “why this chunk” |
 | **Chunk metadata** | `letter_id`, `date`, `url`, `recipient` (string), **`cfr_citations`** from regex on that chunk | Cheap structure without a linker; **not** used for taxonomy in this PoC |
 | **Hybrid retrieval** | **BM25** + **small local embeddings** via **`sentence-transformers`** (**CPU**, optional **MPS** on Apple Silicon), then **RRF** | Standard pattern; **no pay-per-token embedding APIs** per employer README—local **bi-encoder** fits M-class hardware |
 | **Search API** | FastAPI **`POST /search`** (+ **`GET /health`** for ops) | Clear “novel processing” demo |
@@ -106,7 +106,7 @@ That is **weak supervision**: explicit rules + a fixed vocabulary—**auditable*
 
 ### 3. Chunking strategy (`<p>` today; alternatives and interview sound bite)
 
-**Implemented today:** One chunk per non-empty **`<p>`** inside **`article#main-content`** or **`#main-content`**, in **DOM order**; stable id **`letter_id:paragraph_index`**. Implementation: [`fda_regulations.chunking`](../../fda-regulations/src/fda_regulations/chunking/).
+**Implemented today:** Non-empty **`<p>`** elements inside **`article#main-content`** or **`#main-content`**, in **DOM order**, with a **heading-merge pass**: any `<p>` under **80 characters** is prepended (newline-joined) to the next substantive paragraph. Consecutive short paragraphs accumulate until a long paragraph absorbs them; trailing short paragraphs with no following content are emitted as-is. This prevents heading-only chunks ("CGMP Violations", "Data Integrity", "WARNING LETTER") from dominating BM25 for exact-match queries. Stable id **`letter_id:paragraph_index`** (post-merge numbering). Implementation: [`fda_regulations.chunking`](../../fda-regulations/src/fda_regulations/chunking/).
 
 **Semantic / embedding-based chunking** (boundaries from topic shifts or embedding similarity): A **viable next step** if **offline eval** (e.g. nDCG@k on a small labeled set, or qualitative “is this the right passage?” on real queries) shows **clear gain** over **`<p>`**-sized units. Trade-off: **extra cost at index time** (additional embedding passes and/or segmentation logic) and often **less inspectable** chunk boundaries—**only adopt if metrics justify it**, not by default.
 
@@ -129,7 +129,7 @@ Numbers below support the claim that **warning-letter body text on FDA.gov is mo
 | **`h2`** | At most **2** **`h2`** in any letter’s main—**section headings are sparse** as a global structuring signal. |
 | **Empty `<p>`** | **283** empty **`<p>`** in main across the corpus (skipped by the chunker)—negligible. |
 
-**Implication:** For **most** letters, narrative lives in **`<p>`** blocks; **list-** or **heading-first** chunking would only clearly help a **small fraction** of the corpus unless eval shows disproportionate retrieval failures there. Very long **`<p>`** chunks remain an objective **dense-retrieval** concern (many ideas in one vector)—note in interview and consider **split/merge heuristics** only if **labeled-query eval** shows a systematic miss.
+**Implication:** For **most** letters, narrative lives in **`<p>`** blocks; **list-** or **heading-first** chunking would only clearly help a **small fraction** of the corpus unless eval shows disproportionate retrieval failures there. The **heading-merge pass** (implemented) addresses the short-heading problem; very long **`<p>`** chunks remain an objective **dense-retrieval** concern (many ideas in one vector)—note in interview and consider **split heuristics** only if **labeled-query eval** shows a systematic miss.
 
 #### Labeled query sets and human judgment (retrieval eval — not implemented in PoC)
 
@@ -162,7 +162,7 @@ To stay explainable in ~5–7 minutes:
 
 - **No full entity-linking pipeline** (no Strong/Medium/Weak tiers, no inspection-history snapshot on every letter). Optional stretch: one heuristic match later.
 - **No taxonomy in-repo** for this PoC (see **Next steps** §2 above).
-- **No semantic / heading-list chunking experiments** in shipped code—**`<p>`**-only unless eval drives a change (see **Next steps** §3).
+- **No semantic / heading-list chunking experiments** in shipped code—**`<p>`** with heading-merge unless eval drives a change (see **Next steps** §3).
 - **No labeled query set or retrieval-eval harness** in shipped code—**human-judged relevance** on **`chunk_id`s** is documented as a **next step** under **Next steps** §3 **Labeled query sets**.
 - **No CFR / eCFR validation** — we extract **citation-shaped strings** only; we **do not** prove a cite exists in the official Code for a given effective date (see **Next steps** §1 **Interview — scope boundary** and **Next step** there).
 - **Langfuse:** **Optional**. Prefer **structured application logs** first.
@@ -175,7 +175,7 @@ To stay explainable in ~5–7 minutes:
 **Batch pipeline (ingest + index)** — implements stages 1–3; outputs **versioned artifacts** consumed by the API.
 
 1. **Ingest letters** — DataTables AJAX listing + detail HTML fetch (optional caps for dev; unset caps → **full catalog**); **inclusion/exclusion** in the report.
-2. **Chunk** — one **`<p>`** per chunk in **`#main-content`** (see **Next steps** §3 for alternatives and interview line); CFR citation pattern extraction per chunk (metadata on **`ChunkRecord`**, not labels).
+2. **Chunk** — **`<p>`** elements in **`#main-content`** with **heading-merge** (short `<p>` under 80 chars prepended to next substantive paragraph); CFR citation pattern extraction per chunk (metadata on **`ChunkRecord`**, not labels). See **Next steps** §3 for alternatives and interview line.
 3. **Index** — same `chunk_id` for BM25 + embeddings; **persist** chunk JSONL + dense matrix + manifest to the artifact directory.
 
 **Query path (search API)** — implements stages 4–5; **loads** artifacts from stage 3 at **application lifespan** startup.
@@ -233,7 +233,7 @@ To stay explainable in ~5–7 minutes:
 - **`fda_regulations/ingest/scrape/`** — listing parser, HTTP client, **`main.py`** (`run_ingest`, **`run_ingest_new_letters`** for incremental fetch, `iter_letter_list_entries`), Pydantic models for **list rows** and **raw letter documents**; **`fda_regulations.ingest.scrape`** is the public import surface.
 - **`fda-regulations/scripts/`** — **cron-friendly** orchestration (e.g. **`rehydrate_warning_letters.py`**) that composes package APIs; not part of the installed wheel.
 - **`fda_regulations/ingest/corpus.py`** — **`write_corpus_jsonl`**, **`iter_corpus_letters`**, manifest types.
-- **`fda_regulations/chunking/`** — paragraph extraction (`article#main-content` **`<p>`**), CFR regex per chunk, **`ChunkRecord`**.
+- **`fda_regulations/chunking/`** — paragraph extraction with heading-merge (`article#main-content` **`<p>`**), CFR regex per chunk, **`ChunkRecord`**.
 - **`fda_regulations/index/`** — **`build_hybrid_index`**, **`load_hybrid_retriever`**, **`HybridRetriever`**, **`HybridIndexManifest`**, RRF helper.
 - **`fda_regulations/chunking/`** also exports **`raw_letters_to_chunks`** (corpus → **`ChunkRecord`** list).
 - **`fda_regulations/cli/`** — **`fda-scrape`** (`uv run fda-scrape`); **`fda-build-index`** (`uv run fda-build-index`) orchestrates corpus → chunks → index and optional **`--report`**.
@@ -265,7 +265,7 @@ fda-regulations/
     tokenize.py            # shared NFKC + casefold + tokens (query + BM25 token list)
     config.py              # pydantic-settings + FDA listing URL constant
     ingest/                # scrape/ + corpus.py (JSONL); chunking consumes HTML
-    chunking/              # paragraphs + CFR + ChunkRecord + raw_letters_to_chunks
+    chunking/              # paragraphs (heading-merge) + CFR + ChunkRecord + raw_letters_to_chunks
     index/                 # build_hybrid_index, load_hybrid_retriever, RRF
     cli/                   # ``fda-scrape``, ``fda-build-index``
   tests/

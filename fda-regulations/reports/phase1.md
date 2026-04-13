@@ -6,22 +6,29 @@
 |--------|-------|
 | Letters in corpus | 3,384 (full FDA catalog as of 2026-04-10) |
 | Letters with extractable paragraph content | 3,378 |
+| Letters excluded (no `<p>` content) | 6 |
 | Total paragraph chunks | 120,463 |
 | Median paragraphs per letter | ~30 (p90: 57, max: 251) |
-| Chunks with at least one CFR citation (regex) | 11,757 (9.8%) |
-| Embedding model | `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions) |
-| Embedding matrix | ~185 MB (`embeddings.npy`) |
+| Chunks with at least one CFR citation | 11,757 (9.8%) |
 | Median chunk length | 171 characters (p90: 772, max: 5,142) |
+
+**Index artifacts:**
+
+| Artifact | Detail |
+|----------|--------|
+| Embedding model | `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions) |
+| Dense matrix | ~185 MB (`embeddings.npy`) |
+| Index backend | Hybrid BM25 + dense embeddings, fused via reciprocal rank fusion (RRF) |
 
 ---
 
 ## Data source
 
-**FDA Warning Letters** — the public listing at [fda.gov/inspections-compliance-enforcement-and-criminal-investigations/compliance-actions-and-activities/warning-letters](https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/compliance-actions-and-activities/warning-letters).
+**FDA Warning Letters** — the public listing at [fda.gov/…/warning-letters](https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/compliance-actions-and-activities/warning-letters).
 
 Discovery uses **DataTables AJAX pagination** (`/datatables/views/ajax` on the same host) with `start` / `length` parameters to traverse the full catalog. Each letter's **detail page HTML** is fetched via a single GET and stored as raw HTML in `corpus/letters.jsonl`. The corpus also records listing metadata (company name, posted date, issue date) per letter.
 
-The **FDA Data Dashboard API** (structured inspection/compliance data behind OII auth) was not used for this PoC. Warning letters were chosen because they contain **unstructured written narratives** of specific violations — significantly richer signal for a retrieval system than the structured fields available in the Dashboard API.
+The **FDA Data Dashboard API** (structured inspection/compliance data behind OII auth) was not used. Warning letters contain **unstructured written narratives** of specific violations — significantly richer signal for a retrieval system than the pre-structured fields available in the Dashboard API. See [Reasoning](#reasoning) below.
 
 ---
 
@@ -55,37 +62,26 @@ We ingest the **entire published warning-letter catalog** (3,384 letters as of A
 
 ### Why paragraph-level chunking
 
-Each chunk corresponds to a single non-empty `<p>` element inside the letter's `#main-content` region. This matches how FDA writes violations: each paragraph typically addresses **one observation, one corrective expectation, or one regulatory citation**. The result is a chunk granularity that maps naturally to citation boundaries — every search hit points to a specific paragraph in a specific letter.
+Each chunk starts from a non-empty `<p>` element inside the letter's `#main-content` region. This matches how FDA writes violations: each paragraph typically addresses **one observation, one corrective expectation, or one regulatory citation**. The result is a chunk granularity that maps naturally to citation boundaries — every search hit points to a specific paragraph in a specific letter.
 
 Corpus-wide HTML analysis supports this choice: the median letter has ~30 `<p>` elements, only 2.8% of letters contain an `<ol>` in main content, and `<h2>` headings are sparse (at most 2 per letter). The dominant content structure is paragraph-based, not list- or heading-based.
 
-The trade-off: some `<p>` elements are very short headings ("CGMP Violations", "Data Integrity") that score disproportionately well in BM25 because query terms constitute the entire document. This is documented as a retrieval improvement opportunity below.
+**Heading merge:** Many FDA letters contain short heading-only `<p>` elements ("CGMP Violations", "Data Integrity", "WARNING LETTER") that would dominate BM25 for exact-match queries if indexed as standalone chunks. The chunking pipeline handles this with a **heading-merge pass**: any `<p>` under 80 characters is prepended (newline-joined) to the next substantive paragraph. Consecutive short paragraphs accumulate until a long paragraph absorbs them. A trailing short paragraph with no following substantive content is emitted as-is. See `fda_regulations.chunking.paragraphs` for the implementation.
+
+### CFR citation extraction
+
+Each chunk is tagged with **21 CFR citation strings** extracted by two corpus-validated regex patterns (short-form variants like `21 CFR Part 211` and long-form boilerplate like `Title 21, Code of Federal Regulations (CFR), Part 820`). These are stored as metadata on `ChunkRecord.cfr_citations` and returned per hit in `POST /search` responses; retrieval ranking does not use them today. The patterns were validated against the full 3,384-letter corpus; details and follow-on options (two-pass gap detection, library benchmarking) are in `context/plans/implementation-plan.md` under "Next steps."
 
 ---
 
-## Retrieval accuracy: next steps
+## Novel processing (Phase 2)
 
-The following improvements are **not implemented** in this PoC but represent concrete next steps to improve search quality. They are ordered by expected impact relative to effort.
+The dataset above feeds a **hybrid search API** — the Phase 2 deliverable for this assignment:
 
-### 1. Minimum chunk length filter or heading merge
+- **BM25** (sparse / keyword) and **local dense embeddings** (`sentence-transformers`, CPU) run in parallel over the paragraph chunks.
+- Results are merged via **reciprocal rank fusion** (RRF, k=60) and returned through a **FastAPI** endpoint (`POST /search`) with per-hit citations back to the source letter and paragraph.
+- The service builds and runs on macOS with Docker Desktop. See `fda-regulations/README.md` for commands.
 
-Short heading-only paragraphs (typically under 50 characters) dominate BM25 results for queries that happen to match them exactly. Two approaches:
+No pay-per-token APIs are used. The full pipeline runs on M-class laptop hardware with slow but functional response times, consistent with the assignment's PoC scope.
 
-- **Filter at index time:** skip chunks where `len(text) < 50`. Simple but discards the heading signal entirely.
-- **Merge heading with next paragraph:** if a `<p>` is short and followed by a longer `<p>`, concatenate them into one chunk. Preserves heading context in the embedding and produces richer snippets. Requires slightly more DOM-aware chunking logic.
-
-### 2. Labeled evaluation set
-
-Build 20–50 queries with human-judged `chunk_id` relevance labels (binary or graded). Score with recall@k and MRR to quantify the effect of chunking, fusion parameters, or any of the changes below. Even 10–30 queries beats pure intuition for comparing retrieval strategies. See `context/plans/implementation-plan.md` under "Labeled query sets" for the full approach.
-
-### 3. Query-time CFR boost
-
-When a query contains a CFR reference (detected by the same regex used in `chunking/cfr.py`), boost chunks whose `cfr_citations` field overlaps with the query's extracted citations. Implementable as a lightweight score adjustment after RRF — no new model or index required.
-
-### 4. Cross-encoder reranker on top-N
-
-After RRF returns the top 20–50 candidates, score each (query, chunk_text) pair with a cross-encoder (e.g. `cross-encoder/ms-marco-MiniLM-L-6-v2`) and re-sort. Cross-encoders are more accurate than bi-encoders for pairwise relevance but too expensive to run on the full corpus — applying them only to the top-N from fusion is CPU-feasible on laptop hardware.
-
-### 5. CFR citation validation
-
-The current `cfr_citations` field contains **citation-shaped strings** extracted by regex. We do not validate them against the eCFR or a GPO snapshot (no "this part/section existed on date D" guarantee). A future layer could pin an as-of date, ingest a CFR hierarchy, normalize extracted strings to canonical keys, and flag unknown citations for review.
+For retrieval improvement opportunities and future work, see `context/plans/implementation-plan.md` ("Next steps").
