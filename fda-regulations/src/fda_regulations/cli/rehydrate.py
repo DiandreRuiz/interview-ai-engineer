@@ -208,14 +208,16 @@ def main() -> None:
 
     if args.report is not None:
         with_cfr = sum(1 for c in chunks if len(c.cfr_citations) > 0)
+        indexed_letters = len({c.letter_id for c in chunks})
         write_phase1_ingest_report(
             args.report,
-            letter_count=len(merged),
+            letter_count=indexed_letters,
             chunk_count=len(chunks),
             chunks_with_cfr=with_cfr,
             embedding_model_id=model_id,
             artifact_root=artifact_root,
             corpus_dir=corpus_dir,
+            corpus_letter_count=len(merged),
         )
         logging.info("Wrote report %s", args.report)
 
