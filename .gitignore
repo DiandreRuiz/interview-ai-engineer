@@ -53,11 +53,17 @@ coverage.xml
 # Private study notes (not committed)
 terminology-notes.md
 
+# Development process artifact (not part of the deliverable)
+fda-regulations/reports/improvement-report.md
+
 # Local scraped letter previews (fda-scrape --preview-dir)
 fda-regulations/reports/ingest_preview/
 
 # Batch pipeline outputs (corpus JSONL, BM25, embeddings)
 artifacts/
+
+# Cursor IDE (local agent tooling)
+.cursor/
 
 # OS
 .DS_Store
