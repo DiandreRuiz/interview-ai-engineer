@@ -70,7 +70,7 @@ Corpus-wide HTML analysis supports this choice: the median letter has ~30 `<p>` 
 
 ### CFR citation extraction
 
-Each chunk is tagged with **21 CFR citation strings** extracted by two corpus-validated regex patterns (short-form variants like `21 CFR Part 211` and long-form boilerplate like `Title 21, Code of Federal Regulations (CFR), Part 820`). These are stored as metadata on `ChunkRecord.cfr_citations` and returned per hit in `POST /search` responses; retrieval ranking does not use them today. The patterns were validated against the full 3,384-letter corpus; details and follow-on options (two-pass gap detection, library benchmarking) are in `context/plans/implementation-plan.md` under "Next steps."
+Each chunk is tagged with **21 CFR citation strings** extracted by two corpus-validated regex patterns (short-form variants like `21 CFR Part 211` and long-form boilerplate like `Title 21, Code of Federal Regulations (CFR), Part 820`). These are stored as metadata on `ChunkRecord.cfr_citations` and returned per hit in `POST /search` responses; retrieval ranking does not use them today. The patterns were validated against the full 3,384-letter corpus.
 
 ---
 
@@ -84,4 +84,4 @@ The dataset above feeds a **hybrid search API** — the Phase 2 deliverable for 
 
 No pay-per-token APIs are used. The full pipeline runs on M-class laptop hardware with slow but functional response times, consistent with the assignment's PoC scope.
 
-For retrieval improvement opportunities and future work, see `context/plans/implementation-plan.md` ("Next steps").
+For retrieval improvement opportunities and future work, see `fda-regulations/README.md` ("Next steps").

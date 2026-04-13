@@ -2,7 +2,7 @@
 
 Python 3.13 package for the Modicus takehome: warning-letter ingest, hybrid retrieval, and a small FastAPI search API. Assignment goals and grading criteria are in the repository root [README.md](../README.md).
 
-**Code review:** for a single walkthrough of layers and data flow, see [`docs/mental-model-code-review.md`](docs/mental-model-code-review.md). The implementation plan lives at [`context/plans/implementation-plan.md`](../context/plans/implementation-plan.md).
+**Code review:** for a single walkthrough of layers and data flow, see [`docs/mental-model-code-review.md`](docs/mental-model-code-review.md).
 
 ---
 
@@ -15,7 +15,7 @@ cp .env.example .env
 uv sync
 ```
 
-**`.env`:** `uv run` loads it automatically (in addition to **`pydantic-settings`** for the app). It includes **`PYTHONPATH=src`** so imports work everywhere; on some **macOS** setups, Python **ignores “hidden” `.pth` files** in `site-packages`, which would otherwise break editable installs (see [cpython#148121](https://github.com/python/cpython/issues/148121)). **CI** does not rely on `.env`: **`pytest`** uses `pythonpath = ["src"]` in `pyproject.toml`.
+**`.env`:** `uv run` loads it automatically (in addition to **`pydantic-settings`** for the app). It includes **`PYTHONPATH=src`** so imports work everywhere; on some **macOS** setups, Python **ignores "hidden" `.pth` files** in `site-packages`, which would otherwise break editable installs (see [cpython#148121](https://github.com/python/cpython/issues/148121)). **CI** does not rely on `.env`: **`pytest`** uses `pythonpath = ["src"]` in `pyproject.toml`.
 
 For local development **without** a built index, set `REQUIRE_ARTIFACTS=false` in `.env`.
 
@@ -48,7 +48,7 @@ All batch CLIs and the API read **`fda_regulations.config.Settings`** (pydantic-
 | `INGEST_MAX_LISTING_PAGES` | Cap DataTables AJAX batches after the hub shell GET; **unset** = page until the catalog ends. |
 | `INGEST_MAX_LETTERS` | Cap letters fetched after discovery; **unset** = no cap. |
 | `INGEST_REQUEST_DELAY_SECONDS` | Delay between HTTP calls during ingest (politeness). |
-| `INGEST_LISTING_BATCH_SIZE` | DataTables `length` parameter (1–500). |
+| `INGEST_LISTING_BATCH_SIZE` | DataTables `length` parameter (1-500). |
 | `FDA_USER_AGENT` | User-Agent for FDA HTTP requests. |
 | `RRF_K`, `SEARCH_TOP_K_SPARSE`, `SEARCH_TOP_K_DENSE` | Query-time fusion and candidate pool sizes for the loaded retriever. |
 
@@ -140,7 +140,7 @@ The first run may download the **sentence-transformers** model; indexing is CPU-
 
 ## `fda-rehydrate` — incremental catch-up
 
-**When to use:** you already have a corpus and want **only new** warning letters (by `letter_id` slug) without re-fetching the whole catalog’s HTML.
+**When to use:** you already have a corpus and want **only new** warning letters (by `letter_id` slug) without re-fetching the whole catalog's HTML.
 
 **Behavior:**
 
@@ -195,7 +195,7 @@ uv run uvicorn fda_regulations.app.main:app --reload --host 0.0.0.0 --port 8000
 
 - OpenAPI UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - Health: `GET /health`
-- Search: `POST /search` with JSON body `{"query": "…", "top_k": 10}`
+- Search: `POST /search` with JSON body `{"query": "...", "top_k": 10}`
 
 With `REQUIRE_ARTIFACTS=true` (default), startup loads a **hybrid** index from `ARTIFACT_ROOT`. If the manifest or sidecars are missing, startup fails with a clear error.
 
@@ -215,7 +215,7 @@ docker compose up --build
 
 - API available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - Health: `GET /health`
-- Search: `POST /search` with `{"query": "…", "top_k": 10}`
+- Search: `POST /search` with `{"query": "...", "top_k": 10}`
 
 The `docker-compose.yml` sets `ARTIFACT_ROOT=/app/artifacts` and `REQUIRE_ARTIFACTS=true`. Startup loads the hybrid index (BM25 + embeddings); the healthcheck accounts for the ~60 s cold-start on large indexes.
 
@@ -227,18 +227,17 @@ To stop: `docker compose down`.
 
 | Area | Package / module |
 |------|------------------|
-| Scrape | `fda_regulations.ingest.scrape` (`run_ingest`, `run_ingest_new_letters`, …) |
+| Scrape | `fda_regulations.ingest.scrape` (`run_ingest`, `run_ingest_new_letters`, ...) |
 | Corpus I/O | `fda_regulations.ingest.corpus` |
-| Chunking | `fda_regulations.chunking` (`chunk_raw_letter`, `ChunkRecord`, …) |
+| Chunking | `fda_regulations.chunking` (`chunk_raw_letter`, `ChunkRecord`, ...) |
 | Index build / load | `fda_regulations.index` |
-| Corpus → all chunk records | **`raw_letters_to_chunks`** (defined in **`fda_regulations.chunking`**, not a separate module) |
+| Corpus → all chunk records | `raw_letters_to_chunks` (defined in `fda_regulations.chunking`, not a separate module) |
 | Phase-1 markdown report | `fda_regulations.reporting.write_phase1_ingest_report` |
 
 ---
 
-## Next steps (interview — not implemented here)
+## Next steps (not implemented here)
 
-For **what we would add next** after this PoC, see **`context/plans/implementation-plan.md`** → “Next steps (not in PoC — say this in interviews)”:
-
-1. **CFR strings per chunk** — stored as metadata (`cfr_citations`) and returned in `POST /search` responses; retrieval ranking ignores them today but they enable downstream filtering, boosting, or citation display.
-2. **Taxonomy / weak supervision** — the older plan (small label vocab, CFR-prefix rules + keyword overlap, optional search filter/boost) we dropped to keep the stack easy to explain; good to walk through as a deliberate simplification.
+1. **CFR citation filtering/boosting** — `cfr_citations` are already stored per chunk and returned in `POST /search` responses; retrieval ranking ignores them today, but they enable downstream filtering, boosting, or citation display without re-indexing.
+2. **Taxonomy via weak supervision** — coarse chunk labels from a small vocabulary (CFR-prefix rules + keyword overlap), with optional search filter/boost. Dropped from this PoC to keep the stack to hybrid RAG only; the data model already supports adding labels later.
+3. **Retrieval eval harness** — a small labeled query set with human relevance judgments on `chunk_id`s (recall@k, nDCG@k) to justify chunk boundaries and fusion parameters with numbers rather than only corpus HTML stats.

@@ -1,6 +1,6 @@
 # Mental model: FDA hybrid RAG PoC (for code review)
 
-Use this as a **5–7 minute spine**: **decoupled batch pipeline** writes **versioned artifacts**; **FastAPI** only **loads** them and runs **retrieve → fuse → respond**. Single source of truth for intent: [implementation-plan.md](../../context/plans/implementation-plan.md).
+Use this as a **5–7 minute spine**: **decoupled batch pipeline** writes **versioned artifacts**; **FastAPI** only **loads** them and runs **retrieve → fuse → respond**.
 
 ---
 
@@ -143,4 +143,4 @@ flowchart LR
 | “How hybrid merge works” | `index/retriever` + `index/rrf` |
 | “How the API stays async” | `routers/search` + `to_thread` around `Retriever.search` |
 
-This matches the employer-facing package map in [README.md](../README.md) and the detailed pipeline in [implementation-plan.md](../../context/plans/implementation-plan.md).
+This matches the employer-facing package map in [README.md](../README.md).

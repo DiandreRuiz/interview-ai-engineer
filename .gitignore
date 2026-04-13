@@ -53,8 +53,9 @@ coverage.xml
 # Private study notes (not committed)
 terminology-notes.md
 
-# Development process artifact (not part of the deliverable)
+# Development process artifacts (not part of the deliverable)
 fda-regulations/reports/improvement-report.md
+context/plans/
 
 # Local scraped letter previews (fda-scrape --preview-dir)
 fda-regulations/reports/ingest_preview/
