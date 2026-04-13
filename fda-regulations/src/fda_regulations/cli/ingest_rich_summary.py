@@ -46,10 +46,10 @@ def print_step(
     console: Console,
     step: int,
     total: int,
-    emoji: str,
+    marker: str,
     message: str,
 ) -> None:
-    console.print(f"{emoji} [bold]Step {step}/{total}[/] {message}")
+    console.print(f"{marker} [bold]Step {step}/{total}[/] {message}")
 
 
 def print_ingest_completion_report(
@@ -65,7 +65,7 @@ def print_ingest_completion_report(
     rt = result.catalog_records_total
     raw_trav = result.listing_raw_rows_traversed
 
-    table = Table(title=f"📋 {run_label} — summary", show_header=True, header_style="bold")
+    table = Table(title=f"{run_label} — summary", show_header=True, header_style="bold")
     table.add_column("Metric", style="cyan", no_wrap=True)
     table.add_column("Value", style="white")
 
@@ -92,22 +92,22 @@ def print_ingest_completion_report(
     notes: list[str] = []
     if rf is not None and raw_trav is not None and raw_trav != rf:
         notes.append(
-            "[yellow]⚠ Raw rows traversed ≠ recordsFiltered — listing pagination may have "
+            "[yellow]! Raw rows traversed ≠ recordsFiltered — listing pagination may have "
             "stopped early or counts desynced; re-run or inspect logs.[/]"
         )
     if rf is not None and result.listing_rows_seen < rf:
         diff = rf - result.listing_rows_seen
         notes.append(
-            f"[dim]ℹ️  {diff} catalog row(s) not yielded as unique slugs (parse skips, duplicate "
+            f"[dim]i  {diff} catalog row(s) not yielded as unique slugs (parse skips, duplicate "
             f"slugs in listing, or rows without a detail link we accept).[/]"
         )
     if result.fetch_errors:
         notes.append(
-            f"[red]✖ {len(result.fetch_errors)} detail URL(s) failed HTTP — those letters are not "
+            f"[red]x {len(result.fetch_errors)} detail URL(s) failed HTTP — those letters are not "
             f"in this run’s documents; re-run to retry.[/]"
         )
     else:
-        notes.append("[green]✓ No detail-fetch HTTP errors in this run.[/]")
+        notes.append("[green]ok No detail-fetch HTTP errors in this run.[/]")
 
     if notes:
         console.print()

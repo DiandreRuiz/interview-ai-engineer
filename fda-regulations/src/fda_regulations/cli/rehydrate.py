@@ -123,7 +123,7 @@ def main() -> None:
         },
     )
 
-    print_step(out, 1, _STEPS_TOTAL, "📂", f"Load local corpus → [cyan]{corpus_dir}[/]")
+    print_step(out, 1, _STEPS_TOTAL, "[cyan]>[/]", f"Load local corpus → [cyan]{corpus_dir}[/]")
 
     existing_docs, existing_ids = _load_corpus_state(corpus_dir)
     logging.info(
@@ -136,7 +136,7 @@ def main() -> None:
         out,
         2,
         _STEPS_TOTAL,
-        "🌐",
+        "[cyan]>[/]",
         "Scan FDA listing (DataTables) · fetch HTML only for new slugs · stderr = progress",
     )
 
@@ -169,7 +169,7 @@ def main() -> None:
     if not result.documents:
         out.print(
             Panel.fit(
-                "[green]✓ Done.[/] No new letters — corpus and index unchanged.\n"
+                "[green]ok Done.[/] No new letters — corpus and index unchanged.\n"
                 "[dim]Compare FDA recordsFiltered vs local count in the table above.[/]",
                 border_style="green",
             )
@@ -177,13 +177,15 @@ def main() -> None:
         logging.info("No new letters; leaving corpus and index unchanged.")
         return
 
-    print_step(out, 3, _STEPS_TOTAL, "💾", "Merge new letters → write letters.jsonl + manifest")
+    print_step(
+        out, 3, _STEPS_TOTAL, "[cyan]>[/]", "Merge new letters → write letters.jsonl + manifest"
+    )
 
     merged: list[RawLetterDocument] = existing_docs + list(result.documents)
     write_corpus_jsonl(merged, corpus_dir, source="fda-rehydrate")
     logging.info("Wrote corpus with %s letter(s).", len(merged))
 
-    print_step(out, 4, _STEPS_TOTAL, "✂️", "Chunk merged corpus")
+    print_step(out, 4, _STEPS_TOTAL, "[cyan]>[/]", "Chunk merged corpus")
 
     chunks = raw_letters_to_chunks(merged)
     logging.info("Built %s chunk(s).", len(chunks))
@@ -192,7 +194,7 @@ def main() -> None:
         out,
         5,
         _STEPS_TOTAL,
-        "🧮",
+        "[cyan]>[/]",
         f"Rebuild hybrid index (embeddings) → [cyan]{artifact_root}[/]",
     )
 
@@ -220,7 +222,7 @@ def main() -> None:
     out.print()
     out.print(
         Panel.fit(
-            f"[bold green]✓ Rehydrate complete[/]\n"
+            f"[bold green]Rehydrate complete[/]\n"
             f"[white]Letters:[/] {len(merged)}  ·  "
             f"[white]Chunks:[/] {manifest.chunk_count}  ·  "
             f"[white]Model:[/] {manifest.embedding_model_id}",
