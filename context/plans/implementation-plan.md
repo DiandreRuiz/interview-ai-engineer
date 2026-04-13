@@ -75,13 +75,19 @@ These are **deliberately out of scope** for the shipped code so the story stays 
 
 ### 1. CFR citation metadata per chunk (stored and returned in search; not used in ranking)
 
-**In code today:** [`fda_regulations.chunking.cfr`](../../fda-regulations/src/fda_regulations/chunking/cfr.py) runs **deterministic pattern extraction** (lightweight regex-style rules) over each paragraph’s text and stores **deduplicated citation-shaped substrings** on **`ChunkRecord.cfr_citations`** (per chunk only, not a global registry). They are written to **`chunks.jsonl`** and feed **phase-1 report** stats (share of chunks with at least one hit). **`POST /search` returns `cfr_citations` per hit** (added to `RetrievalHit` → `SearchHit`); **BM25 / embeddings ignore them**—retrieval ranking is text-only.
+**In code today:** [`fda_regulations.chunking.cfr`](../../fda-regulations/src/fda_regulations/chunking/cfr.py) runs **deterministic pattern extraction** (two corpus-validated regex patterns) over each paragraph’s text and stores **deduplicated citation-shaped substrings** on **`ChunkRecord.cfr_citations`** (per chunk only, not a global registry). They are written to **`chunks.jsonl`** and feed **phase-1 report** stats (share of chunks with at least one hit). **`POST /search` returns `cfr_citations` per hit** (added to `RetrievalHit` → `SearchHit`); **BM25 / embeddings ignore them**—retrieval ranking is text-only.
 
 **Interview — scope boundary (CFR):** We **maximize recall of citation-shaped strings** for **downstream** use (boosts, UI, analytics, weak labels). We **do not** validate cites against **eCFR** or a GPO snapshot (no “this part/section existed on date *D*” guarantee). That **resolution / validation layer is explicitly out of scope** for this PoC; say so in code review and point to the **Next step** bullet below for how you’d add it. In interviews it is also fair to ask **how the company** handles regulatory cite resolution today and whether they standardize on a vendor tool, in-house grammar, or eCFR-backed services.
 
 **Why this is useful later:** Same artifacts can support **richer answers** (show “this paragraph cites …” next to the snippet), **query-time boosts or filters** (prefer chunks whose extracted CFR strings overlap the question), **normalization** (map strings to eCFR URLs **after** a validation step), or **downstream labeling / analytics** without re-parsing HTML.
 
-**Extraction approach (PoC vs later):** For **FDA warning-letter prose**, a **small, purpose-built, tested extractor** tuned to common letter templates stays **easy to explain** in a walkthrough and **cheap to regression-test** on fixtures and the scraped corpus—without taking a hard dependency on a broad legal-citation stack. Reasonable **follow-ons** to benchmark (not required for this PoC): community tools such as [**eyecite**](https://github.com/freelawproject/eyecite), [**LexNLP** regulatory references](https://lexpredict-lexnlp.readthedocs.io/en/latest/modules/extract/en/regulations.html), or [**unitedstates/citation**](https://github.com/unitedstates/citation) (JS)—compare **marginal recall vs false positives** on our letters, then optionally **union** with the in-house pass and dedupe. Third-party extractors still **do not replace** eCFR-backed validation when you need **legal** correctness.
+**Extraction approach (PoC vs later):** For **FDA warning-letter prose**, a **small, purpose-built, tested extractor** tuned to common letter templates stays **easy to explain** in a walkthrough and **cheap to regression-test** on fixtures and the scraped corpus—without taking a hard dependency on a broad legal-citation stack. CFR citations are a **regular language** (no recursion, finite vocabulary), so **regex is the correct abstraction level**; the alternative approaches—manual tokenize-and-walk state machines, parser combinators (pyparsing/lark), or NER models—would add code or dependencies without improving recall on these patterns.
+
+**Corpus-validated coverage:** The two-pattern extractor (short-form + long-form bridge) was validated against the **full 3,384-letter corpus**. It captures ~18,400 citation spans across 1,822 letters containing CFR references. The three systematic gaps in the original single-regex version—**plural "parts"**, **comma after CFR**, and **long-form "(CFR)" boilerplate**—are now covered. Approximately 400 residual `CFR` token occurrences remain uncovered, primarily from edge-case punctuation or non-21 titles (9 CFR, 27 CFR) that are intentionally out of scope for this Title-21-focused extractor.
+
+**Two-pass gap detection (future):** A lightweight **second pass** could scan each chunk for any remaining word-boundary `CFR` token **not inside** an extracted citation span, emitting `letter_id`, snippet, and character position into a **gap report** (structured log or JSONL sidecar). Optionally **fail CI** if the gap count **increases** vs a pinned baseline—this turns silent misses into **observable diffs** when FDA changes letter templates or new citation styles appear in the catalog, without requiring constant regex maintenance.
+
+**Library follow-ons (not required for this PoC):** Community tools such as [**eyecite**](https://github.com/freelawproject/eyecite) (court-citation-focused but extensible), [**LexNLP** regulatory references](https://lexpredict-lexnlp.readthedocs.io/en/latest/modules/extract/en/regulations.html) (broad legal-entity extraction), or [**unitedstates/citation**](https://github.com/unitedstates/citation) (JS) are candidates for **benchmarking marginal recall vs false positives** if the team wants broader legal-citation coverage beyond 21 CFR. Evaluation path: run a candidate extractor against the same corpus, compare its span set to ours, and decide whether the **extra recall justifies** the dependency and any false-positive noise. These tools still **do not replace** eCFR-backed validation when you need **legal** correctness.
 
 **Next step (not implemented — pair with validation when needed):** Pin **as-of date**, ingest a **CFR hierarchy** (eCFR / GPO bulk), normalize extracted strings to **canonical keys**, flag **unknown** cites for human or offline review.
 
@@ -109,15 +115,6 @@ That is **weak supervision**: explicit rules + a fixed vocabulary—**auditable*
 **If the source modality changes:** Letters are chunked from **detail-page HTML** today. If a future pipeline ingests **raw text** (or PDF-to-text) **without** the same `<p>` structure, **`<p>`-based chunking no longer applies**; you would need a strategy suited to **that** representation (e.g. sentence windows, fixed token spans, or **semantic** splitting **after** measuring on that text). **Ingest** can still store full payloads; **chunking** is what must adapt.
 
 **Hybrid retrieval vs chunk size:** **BM25 + dense embeddings + RRF** improves recall when queries **match tokens** (sparse) or **paraphrase** the passage (dense). It does **not** eliminate the need for sensible **chunk boundaries**: both retrievers still score **whole chunks**. A passage split across chunks can remain **hard to surface** even with fusion. Treat hybrid search as **complementary** to chunking choices, **not** a substitute for **eval-driven** chunk refinement.
-
-**Interview sound bite (memorize / adapt):** We chunk at FDA’s **paragraph tags** so each hit maps to a **stable place** in the letter; we’d **measure** that against **real queries**, and if needed **refine** using **headings and list items** from the **same HTML**, **without** changing the **ingest contract** (still **full HTML** on disk in **`corpus/letters.jsonl`**; only **chunking** and **rebuild index** change).
-
-**If asked “what does that mean?”**
-
-- **Stable place:** **`letter_id`** + **`paragraph_index`** = order of **`<p>`** elements under **`#main-content`**.
-- **Validate:** Build a small **labeled query set** with **human judgments** and score the retriever (see **Labeled query sets** below)—even **10–30** queries beats pure intuition.
-- **Refine:** e.g. chunk by **`<li>`** or **blocks under `h2`**, still **parsing stored HTML**—no re-scrape required.
-- **Ingest contract unchanged:** **`letters.jsonl`** still holds **full HTML**; swapping chunking only requires **re-running the chunk + index pipeline**.
 
 #### Corpus-wide HTML statistics (study / justify `<p>` chunking)
 
@@ -273,22 +270,6 @@ fda-regulations/
     cli/                   # ``fda-scrape``, ``fda-build-index``
   tests/
 ```
-
----
-
-## Interview checklist (you should be able to answer)
-
-- Why **paragraph** chunks vs fixed token windows? (Sound bite + alternatives + **corpus HTML table**: **Next steps** §3.)
-- Why **BM25 + dense** and not one or the other?
-- What you **did not** pick for sparse/dense/fusion (e.g. TF–IDF-only, hosted embeddings, weighted score blend) and **why**—see appendix **Alternatives considered**.
-- What **RRF** does and why you didn’t normalize scores by hand.
-- **Next steps:** What **`cfr_citations`** on each chunk are for today, and how you’d **use them next** (API field, boost/filter, links)—see **Next steps** §1.
-- **CFR validation boundary:** We **extract citation-shaped strings** for metadata and downstream use; we **do not** validate against **eCFR** or a GPO snapshot (no effective-dating or “exists in the Code” guarantee)—that layer is **deferred** on purpose. Be ready to say how you’d add it (**Next steps** §1 **Next step**) and to ask how the **company** resolves regulatory cites today.
-- **Next steps:** The **weak-supervision taxonomy** we scoped (CFR rules + keyword threshold + optional search filter/boost) and why it was **deferred**—see **Next steps** §2.
-- What **inclusion/exclusion** you used and one limitation of the data.
-- How you’d add **stronger grounding** later (entity link, reranker)—without claiming you built it in the PoC.
-- Why **ingest/index is decoupled** from the API and how you’d run an **A/B** between two indexer implementations.
-- **Labeled query set:** What you’d **label** (queries + **which `chunk_id`s are relevant**), **where** it lives (offline eval file, not on **`ChunkRecord`**), and **how** you’d use **human judgments** to score retrieval—**Next steps** §3 **Labeled query sets**.
 
 ---
 
