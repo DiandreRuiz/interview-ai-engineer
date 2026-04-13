@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+.ruff_cache/
 *.py[cod]
 *$py.class
 *.so
@@ -49,6 +50,21 @@ coverage.xml
 .env.*
 !.env.example
 
+# Private study notes (not committed)
+terminology-notes.md
+
+# Development process artifacts (not part of the deliverable)
+fda-regulations/reports/improvement-report.md
+context/plans/
+
+# Local scraped letter previews (fda-scrape --preview-dir)
+fda-regulations/reports/ingest_preview/
+
+# Batch pipeline outputs (corpus JSONL, BM25, embeddings)
+artifacts/
+
+# Cursor IDE (local agent tooling)
+.cursor/
 
 # OS
 .DS_Store

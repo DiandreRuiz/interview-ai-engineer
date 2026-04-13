@@ -1,0 +1,13 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./fda-regulations/artifacts:/app/artifacts:ro
+    environment:
+      - ARTIFACT_ROOT=/app/artifacts
+      - REQUIRE_ARTIFACTS=true
+    restart: unless-stopped

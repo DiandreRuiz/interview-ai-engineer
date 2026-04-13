@@ -1,7 +1,72 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "fda-regulations"
 version = "0.1.0"
-description = "Add your description here"
+description = "FDA warning-letter hybrid RAG PoC (Modicus takehome)"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "beautifulsoup4>=4.12.0",
+    "fastapi>=0.115.0",
+    "httpx>=0.28.0",
+    "lxml>=5.3.0",
+    "numpy>=2.4.4",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "rank-bm25>=0.2.2",
+    "rich>=13.0",
+    "sentence-transformers>=5.4.0",
+    "torch>=2.11.0",
+    "uvicorn[standard]>=0.32.0",
+]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.389",
+    "pytest>=8.3.0",
+    "respx>=0.22.0",
+    "ruff>=0.8.0",
+]
+
+[project.scripts]
+fda-scrape = "fda_regulations.cli.scrape:main"
+fda-build-index = "fda_regulations.cli.build_index:main"
+fda-rehydrate = "fda_regulations.cli.rehydrate:main"
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fda_regulations"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/**" = ["E501"]
+"tests/**" = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pyright]
+include = ["src", "tests", "scripts"]
+exclude = ["**/__pycache__", ".venv"]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
